@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Build output
+dist/
+build/
+
+# Test coverage and results
+coverage/
+playwright-report/
+test-results/
+
+# Maistro (local AI assistant state)
+.maistro/
+
+# Temporary files
+*.tmp
+*.temp
+/tmp/
+
+# OS files
+Thumbs.db

@@ -1,0 +1,45 @@
+# DuoCode - Real-Time Collaborative Coding Interview Platform
+
+> DuoCode is a free, privacy-focused collaborative coding interview platform that enables real-time code editing, diagram drawing, and messaging between participants.
+
+## Overview
+
+DuoCode helps interviewers and candidates collaborate during technical interviews. All communication happens peer-to-peer using WebRTC, meaning no data is stored on servers.
+
+## Key Features
+
+- **Real-time Code Editor**: Syntax highlighting for 15+ programming languages (JavaScript, Python, Java, Go, Rust, C++, and more)
+- **Diagram Canvas**: Drawing tools, shapes (rectangles, circles, lines), text, zoom/pan, undo/redo
+- **Messaging**: Built-in chat for communication during sessions
+- **P2P Sync**: WebRTC-based synchronization - all data stays between participants
+- **No Signup**: Start a session instantly, share the URL, collaborate
+- **Privacy**: No server-side storage - sessions are ephemeral
+- **PDF Export**: Save session content as PDF
+- **Multi-participant**: Support for up to 50 users per session
+
+## How It Works
+
+1. Visit the app
+2. Enter your name to create a session
+3. Share the session URL with others
+4. Collaborate in real-time on code, diagrams, and chat
+
+## Technical Details
+
+- Frontend: TypeScript + React + Vite with Zustand state management
+- Sync: WebRTC DataChannel for peer-to-peer communication
+- Signaling: Socket.IO for WebRTC connection setup only
+- Persistence: Client-side only (localStorage, IndexedDB)
+
+## Use Cases
+
+- Technical coding interviews
+- Pair programming sessions
+- Algorithm design discussions
+- System design whiteboarding
+- Code reviews
+- Teaching and tutoring
+
+## Source Code
+
+GitHub: https://github.com/DreamTeamMobile/duocode

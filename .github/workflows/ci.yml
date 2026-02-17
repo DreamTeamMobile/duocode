@@ -1,0 +1,82 @@
+name: CI & Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_GA_ID: G-M2LM7S9F1V
+
+  deploy:
+    name: Deploy to Production
+    needs: test-and-build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_GA_ID: G-M2LM7S9F1V
+
+      - name: Create deployment archive
+        run: tar czf deploy.tar.gz dist/ server/ deploy/ package.json
+
+      - name: Parse deploy target
+        run: |
+          echo "DEPLOY_USER=${DEPLOY_TARGET%%@*}" >> $GITHUB_ENV
+          echo "DEPLOY_HOST=${DEPLOY_TARGET##*@}" >> $GITHUB_ENV
+        env:
+          DEPLOY_TARGET: ${{ secrets.DEPLOY_SERVER_NAME_HOST }}
+
+      - name: Copy archive to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SERVER_SSH_PRIVATE_KEY }}
+          source: deploy.tar.gz
+          target: /tmp
+
+      - name: Deploy and restart services
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SERVER_SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /opt/duocode
+            tar xzf /tmp/deploy.tar.gz
+            cd server && npm install --production && cd ..
+            cp deploy/nginx-duocode.conf /etc/nginx/sites-available/duocode
+            nginx -t && systemctl reload nginx
+            systemctl restart duocode-signaling
+            sleep 2
+            curl -sf http://localhost:3001/health || (echo "Health check failed" && exit 1)
+            rm -f /tmp/deploy.tar.gz

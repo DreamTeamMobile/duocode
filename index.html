@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="color-scheme" content="light dark">
+    <title>DuoCode - Real-Time Collaborative Coding Interview Platform</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="DuoCode is a free real-time collaborative coding interview platform. Share code, draw diagrams, and chat with candidates using peer-to-peer WebRTC technology. No signup required.">
+    <meta name="keywords" content="coding interview, pair programming, collaborative coding, code editor, whiteboard, technical interview, WebRTC, real-time collaboration">
+    <meta name="author" content="DuoCode">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://duocode.app/">
+    <link rel="llms" href="/llms.txt" type="text/plain">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://duocode.app/">
+    <meta property="og:title" content="DuoCode - Real-Time Collaborative Coding Interview Platform">
+    <meta property="og:description" content="Free real-time collaborative coding interviews. Share code, draw diagrams, and chat with peer-to-peer sync. No signup required.">
+    <meta property="og:site_name" content="DuoCode">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://duocode.app/">
+    <meta name="twitter:title" content="DuoCode - Real-Time Collaborative Coding Interview Platform">
+    <meta name="twitter:description" content="Free real-time collaborative coding interviews. Share code, draw diagrams, and chat with peer-to-peer sync. No signup required.">
+
+    <!-- Additional Meta -->
+    <meta name="application-name" content="DuoCode">
+    <meta name="theme-color" content="#4285f4">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="DuoCode">
+
+    <!-- Structured Data for Search Engines and LLMs -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "DuoCode",
+        "url": "https://duocode.app/",
+        "description": "A free real-time collaborative coding interview platform with code editor, diagram canvas, and chat. Uses peer-to-peer WebRTC for instant sync between participants.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript, WebRTC support",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "featureList": [
+            "Real-time collaborative code editor with syntax highlighting for 15+ languages",
+            "Interactive diagram canvas with drawing tools, shapes, and zoom/pan",
+            "Built-in messaging system",
+            "Peer-to-peer WebRTC synchronization",
+            "No signup or account required",
+            "No server-side data storage - fully private",
+            "PDF export of session content",
+            "Dark and light theme support",
+            "Mobile-friendly responsive design"
+        ],
+        "screenshot": "https://duocode.app/screenshot.png",
+        "softwareVersion": "__APP_VERSION__",
+        "author": {
+            "@type": "Organization",
+            "name": "DreamTeam Mobile",
+            "url": "https://dreamteam-mobile.com"
+        }
+    }
+    </script>
+
+    <!-- Google Analytics (set VITE_GA_ID env var to enable) -->
+    <script>
+      (function() {
+        var id = '__GA_ID__';
+        if (!id || id === '__' + 'GA_ID' + '__') return;
+        var s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + id;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', id);
+      })();
+    </script>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%234285f4'/%3E%3Cpath d='M30 35 L45 50 L30 65' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M70 35 L55 50 L70 65' stroke='white' stroke-width='8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>

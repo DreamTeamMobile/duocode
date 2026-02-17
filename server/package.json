@@ -1,0 +1,21 @@
+{
+  "name": "duocode-signaling-server",
+  "version": "1.0.0",
+  "description": "Lightweight WebRTC signaling server for DuoCode collaboration tool",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "webrtc",
+    "signaling",
+    "socket.io"
+  ],
+  "author": "DreamTeam Mobile <contact@dreamteam-mobile.com>",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "socket.io": "^4.7.2",
+    "cors": "^2.8.5"
+  }
+}
