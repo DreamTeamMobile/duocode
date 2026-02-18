@@ -208,6 +208,178 @@ export function getShapeCenter(stroke: Stroke): Point {
   return stroke.position || { x: 0, y: 0 };
 }
 
+// ── Universal Hit-Testing & Selection ────────────────────────────────────────
+
+export interface StrokeBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * Returns the bounding box for any stroke type.
+ */
+export function getStrokeBounds(stroke: Stroke): StrokeBounds {
+  if (stroke.tool === 'pen' && stroke.points && stroke.points.length > 0) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of stroke.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y > maxY) maxY = p.y;
+    }
+    return { minX, minY, maxX, maxY };
+  }
+
+  if (stroke.tool === 'circle' && stroke.start && stroke.end) {
+    const radius = Math.sqrt(
+      (stroke.end.x - stroke.start.x) ** 2 + (stroke.end.y - stroke.start.y) ** 2
+    );
+    return {
+      minX: stroke.start.x - radius,
+      minY: stroke.start.y - radius,
+      maxX: stroke.start.x + radius,
+      maxY: stroke.start.y + radius,
+    };
+  }
+
+  if (stroke.tool === 'text' && stroke.position) {
+    const fontSize = stroke.fontSize || DEFAULT_FONT_SIZE;
+    const lines = (stroke.text || '').split('\n');
+    const lineHeight = fontSize * 1.3;
+    const maxLineLen = Math.max(...lines.map(l => l.length), 1);
+    const approxWidth = Math.max(maxLineLen * fontSize * 0.6, 20);
+    const approxHeight = lines.length * lineHeight;
+    return {
+      minX: stroke.position.x,
+      minY: stroke.position.y,
+      maxX: stroke.position.x + approxWidth,
+      maxY: stroke.position.y + approxHeight,
+    };
+  }
+
+  // line, rectangle, or any start/end shape
+  if (stroke.start && stroke.end) {
+    return {
+      minX: Math.min(stroke.start.x, stroke.end.x),
+      minY: Math.min(stroke.start.y, stroke.end.y),
+      maxX: Math.max(stroke.start.x, stroke.end.x),
+      maxY: Math.max(stroke.start.y, stroke.end.y),
+    };
+  }
+
+  return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+}
+
+/**
+ * Universal hit-test for all stroke types.
+ * Returns the index of the topmost stroke at (x,y), or null.
+ */
+export function findStrokeAtPosition(strokes: Stroke[], x: number, y: number): number | null {
+  const HIT_TOLERANCE = 8;
+
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    const stroke = strokes[i];
+
+    if (stroke.tool === 'rectangle' && stroke.start && stroke.end) {
+      const minX = Math.min(stroke.start.x, stroke.end.x);
+      const maxX = Math.max(stroke.start.x, stroke.end.x);
+      const minY = Math.min(stroke.start.y, stroke.end.y);
+      const maxY = Math.max(stroke.start.y, stroke.end.y);
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) return i;
+    } else if (stroke.tool === 'circle' && stroke.start && stroke.end) {
+      const radius = Math.sqrt(
+        (stroke.end.x - stroke.start.x) ** 2 + (stroke.end.y - stroke.start.y) ** 2
+      );
+      const dist = Math.sqrt((x - stroke.start.x) ** 2 + (y - stroke.start.y) ** 2);
+      if (dist <= radius) return i;
+    } else if (stroke.tool === 'text' && stroke.text && stroke.position) {
+      const bounds = getStrokeBounds(stroke);
+      if (x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY) return i;
+    } else if (stroke.tool === 'pen' && stroke.points && stroke.points.length > 0) {
+      for (const p of stroke.points) {
+        if (Math.abs(x - p.x) <= HIT_TOLERANCE && Math.abs(y - p.y) <= HIT_TOLERANCE) return i;
+      }
+    } else if (stroke.tool === 'line' && stroke.start && stroke.end) {
+      // Point-to-line-segment distance
+      const dx = stroke.end.x - stroke.start.x;
+      const dy = stroke.end.y - stroke.start.y;
+      const lenSq = dx * dx + dy * dy;
+      if (lenSq === 0) {
+        if (Math.abs(x - stroke.start.x) <= HIT_TOLERANCE && Math.abs(y - stroke.start.y) <= HIT_TOLERANCE) return i;
+      } else {
+        let t = ((x - stroke.start.x) * dx + (y - stroke.start.y) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        const projX = stroke.start.x + t * dx;
+        const projY = stroke.start.y + t * dy;
+        const dist = Math.sqrt((x - projX) ** 2 + (y - projY) ** 2);
+        if (dist <= HIT_TOLERANCE) return i;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Returns a new stroke with all coordinates shifted by (dx, dy).
+ */
+export function translateStroke(stroke: Stroke, dx: number, dy: number): Stroke {
+  const result = { ...stroke };
+
+  if (result.start) {
+    result.start = { x: result.start.x + dx, y: result.start.y + dy };
+  }
+  if (result.end) {
+    result.end = { x: result.end.x + dx, y: result.end.y + dy };
+  }
+  if (result.position) {
+    result.position = { x: result.position.x + dx, y: result.position.y + dy };
+  }
+  if (result.points) {
+    result.points = result.points.map(p => ({ x: p.x + dx, y: p.y + dy }));
+  }
+
+  return result;
+}
+
+// ── Text Hit-Testing ────────────────────────────────────────────────────────
+
+/**
+ * Find a text stroke at the given position.
+ * Uses an approximate bounding box based on character count and font size.
+ * Returns the index of the topmost matching text stroke, or null.
+ */
+export function findTextAtPosition(
+  strokes: Stroke[],
+  x: number,
+  y: number,
+  defaultFontSize: number = DEFAULT_FONT_SIZE
+): number | null {
+  for (let i = strokes.length - 1; i >= 0; i--) {
+    const stroke = strokes[i];
+    if (stroke.tool !== 'text' || !stroke.text || !stroke.position) continue;
+
+    const fontSize = stroke.fontSize || defaultFontSize;
+    const lines = stroke.text.split('\n');
+    const lineHeight = fontSize * 1.3;
+    // Approximate width: ~0.6em per character, use widest line
+    const maxLineLen = Math.max(...lines.map(l => l.length));
+    const approxWidth = Math.max(maxLineLen * fontSize * 0.6, 20);
+    const approxHeight = lines.length * lineHeight;
+
+    const minX = stroke.position.x;
+    const minY = stroke.position.y;
+    const maxX = minX + approxWidth;
+    const maxY = minY + approxHeight;
+
+    if (x >= minX && x <= maxX && y >= minY && y <= maxY) {
+      return i;
+    }
+  }
+  return null;
+}
+
 // ── Undo / Redo History ─────────────────────────────────────────────────────
 
 export interface UndoRedoResult {

@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Test text tool functionality
  * Validates:
  * 1. Text tool click shows text input at correct position
- * 2. Typing and pressing Enter commits text to canvas
+ * 2. Typing and pressing Ctrl+Enter commits text to canvas
  * 3. Double-click on shapes shows text input
  * 4. Text on shapes commits correctly
  * 5. Text syncs between participants
@@ -56,9 +56,9 @@ test.describe('Text Tool', () => {
         expect(textInputVisible).toBe(true);
         console.log('SUCCESS: Text input is visible');
 
-        console.log('Step 6: Type text and press Enter...');
+        console.log('Step 6: Type text and press Ctrl+Enter...');
         await page.keyboard.type('Hello Canvas');
-        await page.keyboard.press('Enter');
+        await page.keyboard.press('Control+Enter');
 
         // Wait for text to be committed
         await page.waitForTimeout(500);
@@ -144,9 +144,9 @@ test.describe('Text Tool', () => {
         expect(textInputVisible).toBe(true);
         console.log('SUCCESS: Text input appears on double-click');
 
-        console.log('Step 7: Type text and press Enter...');
+        console.log('Step 7: Type text and press Ctrl+Enter...');
         await page.keyboard.type('Rectangle Label');
-        await page.keyboard.press('Enter');
+        await page.keyboard.press('Control+Enter');
 
         await page.waitForTimeout(500);
 
@@ -208,7 +208,7 @@ test.describe('Text Tool', () => {
         await page1.mouse.click(box1!.x + 250, box1!.y + 250);
         await page1.waitForTimeout(300);
         await page1.keyboard.type('Synced Text');
-        await page1.keyboard.press('Enter');
+        await page1.keyboard.press('Control+Enter');
 
         console.log('Step 5: Verify User2 received the text...');
         // Poll for sync instead of fixed wait
@@ -229,7 +229,7 @@ test.describe('Text Tool', () => {
         await page2.mouse.click(box2!.x + 400, box2!.y + 200);
         await page2.waitForTimeout(300);
         await page2.keyboard.type('User2 Text');
-        await page2.keyboard.press('Enter');
+        await page2.keyboard.press('Control+Enter');
 
         console.log('Step 7: Verify User1 received text from User2...');
         // Poll for sync instead of fixed wait

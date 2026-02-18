@@ -4,20 +4,29 @@ interface TextInputOverlayProps {
   position: { left: number; top: number };
   onCommit: (text: string) => void;
   onDismiss: () => void;
+  initialText?: string;
 }
 
-export default function TextInputOverlay({ position, onCommit, onDismiss }: TextInputOverlayProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+export default function TextInputOverlay({ position, onCommit, onDismiss, initialText }: TextInputOverlayProps) {
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const mountedAtRef = useRef(Date.now());
   const committedRef = useRef(false);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    if (initialText) {
+      el.value = initialText;
+      // Place cursor at end
+      el.selectionStart = el.selectionEnd = initialText.length;
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        // Ctrl+Enter / Cmd+Enter → commit
         e.preventDefault();
         committedRef.current = true;
         onCommit(inputRef.current?.value ?? '');
@@ -25,16 +34,14 @@ export default function TextInputOverlay({ position, onCommit, onDismiss }: Text
         committedRef.current = true;
         onDismiss();
       }
+      // Plain Enter = default textarea newline behavior (no preventDefault)
     },
     [onCommit, onDismiss],
   );
 
   const handleBlur = useCallback(() => {
-    // Already committed via Enter/Escape — skip to avoid double-commit
     if (committedRef.current) return;
 
-    // Re-focus if blur happens within 300ms of mount — prevents the mouseup
-    // from the initial canvas click from stealing focus
     if (Date.now() - mountedAtRef.current < 300) {
       requestAnimationFrame(() => inputRef.current?.focus());
       return;
@@ -47,6 +54,14 @@ export default function TextInputOverlay({ position, onCommit, onDismiss }: Text
     }
   }, [onCommit, onDismiss]);
 
+  const handleInput = useCallback(() => {
+    // Auto-resize textarea height to fit content
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
   return (
     <div
       className="text-input-overlay"
@@ -55,13 +70,14 @@ export default function TextInputOverlay({ position, onCommit, onDismiss }: Text
         top: `${position.top}px`,
       }}
     >
-      <input
+      <textarea
         ref={inputRef}
         id="canvasTextInput"
-        type="text"
         placeholder="Enter text..."
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
+        onInput={handleInput}
+        rows={1}
       />
     </div>
   );

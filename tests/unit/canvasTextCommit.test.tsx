@@ -12,9 +12,9 @@ import TextInputOverlay from '../../src/components/DiagramCanvas/TextInputOverla
  * its blur handler can read the input value.
  *
  * These tests verify:
- * 1. Text commit via Enter key works correctly
+ * 1. Text commit via Ctrl+Enter works correctly
  * 2. Text commit via blur (click outside) works correctly
- * 3. No double-commit when Enter is followed by blur on unmount
+ * 3. No double-commit when Ctrl+Enter is followed by blur on unmount
  */
 
 describe('Canvas text commit', () => {
@@ -23,7 +23,7 @@ describe('Canvas text commit', () => {
   });
 
   describe('TextInputOverlay commit behavior', () => {
-    it('should call onCommit with text value when Enter is pressed', () => {
+    it('should call onCommit with text value when Ctrl+Enter is pressed', () => {
       const onCommit = vi.fn();
       const onDismiss = vi.fn();
 
@@ -37,7 +37,7 @@ describe('Canvas text commit', () => {
 
       const input = screen.getByPlaceholderText('Enter text...');
       fireEvent.change(input, { target: { value: 'Enter Text' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true });
 
       expect(onCommit).toHaveBeenCalledWith('Enter Text');
       expect(onCommit).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('Canvas text commit', () => {
       dateSpy.mockRestore();
     });
 
-    it('should not double-commit when Enter is followed by unmount blur', () => {
+    it('should not double-commit when Ctrl+Enter is followed by unmount blur', () => {
       const onCommit = vi.fn();
       const onDismiss = vi.fn();
 
@@ -85,7 +85,7 @@ describe('Canvas text commit', () => {
 
       const input = screen.getByPlaceholderText('Enter text...');
       fireEvent.change(input, { target: { value: 'Test Text' } });
-      fireEvent.keyDown(input, { key: 'Enter' });
+      fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true });
 
       expect(onCommit).toHaveBeenCalledTimes(1);
       expect(onCommit).toHaveBeenCalledWith('Test Text');

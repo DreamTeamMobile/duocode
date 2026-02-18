@@ -31,9 +31,11 @@ export function useCanvasSync({ sendMessage }: UseCanvasSyncOptions = {}): UseCa
   const clear = useCanvasStore((s) => s.clear);
   const updateRemoteDrawer = useCanvasStore((s) => s.updateRemoteDrawer);
   const drawingStrokes = useCanvasStore((s) => s.drawingStrokes);
+  const strokeVersion = useCanvasStore((s) => s.strokeVersion);
 
   const isRemoteUpdateRef = useRef(false);
   const previousStrokesLenRef = useRef(0);
+  const previousVersionRef = useRef(0);
 
   // Auto-send new strokes when added locally
   useEffect(() => {
@@ -65,6 +67,22 @@ export function useCanvasSync({ sendMessage }: UseCanvasSyncOptions = {}): UseCa
 
     previousStrokesLenRef.current = currLen;
   }, [drawingStrokes, sendMessage]);
+
+  // Detect in-place stroke updates (same length, version bumped)
+  useEffect(() => {
+    if (isRemoteUpdateRef.current) {
+      previousVersionRef.current = strokeVersion;
+      return;
+    }
+
+    if (strokeVersion > previousVersionRef.current && sendMessage) {
+      sendMessage({
+        type: 'canvas-sync',
+        strokes: drawingStrokes,
+      });
+    }
+    previousVersionRef.current = strokeVersion;
+  }, [strokeVersion, drawingStrokes, sendMessage]);
 
   const sendStroke = useCallback((stroke: Stroke) => {
     if (sendMessage) {

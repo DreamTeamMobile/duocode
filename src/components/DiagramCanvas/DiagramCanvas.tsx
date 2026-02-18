@@ -11,6 +11,11 @@ import {
   applyCanvasTransform,
   reconcileCoordinates,
   filterStrokesAfterErase,
+  getShapeCenter,
+  findTextAtPosition,
+  findStrokeAtPosition,
+  getStrokeBounds,
+  translateStroke,
   DEFAULT_FONT_SIZE,
   MIN_SCALE,
   MAX_SCALE,
@@ -24,6 +29,8 @@ interface TextOverlayState {
   x: number;
   y: number;
   shapeIndex: number | null;
+  editIndex: number | null;
+  initialText: string;
 }
 
 interface MouseLikeEvent {
@@ -48,8 +55,13 @@ export default function DiagramCanvas() {
   const pinchScaleRef = useRef(1);
   const lastPanPointRef = useRef<Point>({ x: 0, y: 0 });
 
+  // Selection state refs
+  const selectedIndexRef = useRef<number | null>(null);
+  const dragStartRef = useRef<Point>({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+
   // Text overlay state
-  const textOverlayRef = useRef<TextOverlayState>({ visible: false, x: 0, y: 0, shapeIndex: null });
+  const textOverlayRef = useRef<TextOverlayState>({ visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' });
 
   // Store selectors — only subscribe to values that trigger re-renders
   const currentTool = useCanvasStore((s) => s.currentTool);
@@ -122,10 +134,15 @@ export default function DiagramCanvas() {
     (ctx: CanvasRenderingContext2D, strokes: Stroke[]) => {
       strokes.forEach((stroke) => {
         if (stroke.tool === 'text' && stroke.text && stroke.position) {
-          ctx.font = `${stroke.fontSize || DEFAULT_FONT_SIZE}px sans-serif`;
+          const fontSize = stroke.fontSize || DEFAULT_FONT_SIZE;
+          ctx.font = `${fontSize}px sans-serif`;
           ctx.fillStyle = stroke.color || '#000';
           ctx.textBaseline = 'top';
-          ctx.fillText(stroke.text, stroke.position.x, stroke.position.y);
+          const lines = stroke.text.split('\n');
+          const lineHeight = fontSize * 1.3;
+          lines.forEach((line, i) => {
+            ctx.fillText(line, stroke.position!.x, stroke.position!.y + i * lineHeight);
+          });
         } else {
           ctx.beginPath();
           ctx.strokeStyle = stroke.color || '#000';
@@ -176,6 +193,29 @@ export default function DiagramCanvas() {
     [],
   );
 
+  const renderSelection = useCallback(
+    (ctx: CanvasRenderingContext2D, strokes: Stroke[]) => {
+      const idx = selectedIndexRef.current;
+      if (idx === null || idx < 0 || idx >= strokes.length) return;
+
+      const bounds = getStrokeBounds(strokes[idx]);
+      const pad = 6;
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#007bff';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(
+        bounds.minX - pad,
+        bounds.minY - pad,
+        bounds.maxX - bounds.minX + pad * 2,
+        bounds.maxY - bounds.minY + pad * 2,
+      );
+      ctx.setLineDash([]);
+      ctx.restore();
+    },
+    [],
+  );
+
   const saveToBuffer = useCallback(() => {
     const canvas = canvasRef.current;
     const buffer = bufferRef.current;
@@ -212,7 +252,10 @@ export default function DiagramCanvas() {
     if (buffer && strokes?.length > 0) {
       ctx.drawImage(buffer, 0, 0);
     }
-  }, [getState, getCanvasBackground]);
+
+    // Draw selection highlight on top (not baked into buffer)
+    renderSelection(ctx, strokes);
+  }, [getState, getCanvasBackground, renderSelection]);
 
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
@@ -240,6 +283,14 @@ export default function DiagramCanvas() {
     return () => cancelAnimationFrame(id);
   }, [drawingStrokes, theme, redrawAll]);
 
+  // Clear selection when switching away from select tool
+  useEffect(() => {
+    if (currentTool !== 'select') {
+      selectedIndexRef.current = null;
+      isDraggingRef.current = false;
+    }
+  }, [currentTool]);
+
   // ── Text overlay state (must be before mouse handlers that reference it) ──
 
   const [overlayKey, setOverlayKey] = useState(0);
@@ -250,15 +301,18 @@ export default function DiagramCanvas() {
   const handleTextCommit = useCallback(
     (text: string) => {
       if (!text.trim()) {
-        textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+        textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
         forceOverlayUpdate();
         return;
       }
 
-      const { shapeIndex } = textOverlayRef.current;
+      const { shapeIndex, editIndex } = textOverlayRef.current;
       if (shapeIndex !== null) {
-        // Add text to existing shape
+        // Add/update text on existing shape
         getState().updateStrokeAt(shapeIndex, { text });
+      } else if (editIndex !== null) {
+        // Edit existing text stroke in-place
+        getState().updateStrokeAt(editIndex, { text });
       } else {
         // Create standalone text stroke
         const { strokeColor: color } = getState();
@@ -271,14 +325,14 @@ export default function DiagramCanvas() {
         };
         getState().addStroke(stroke);
       }
-      textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+      textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
       forceOverlayUpdate();
     },
     [getState, forceOverlayUpdate],
   );
 
   const handleTextDismiss = useCallback(() => {
-    textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+    textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
     forceOverlayUpdate();
   }, [forceOverlayUpdate]);
 
@@ -295,6 +349,22 @@ export default function DiagramCanvas() {
       const pos = getMousePos(e);
       startPosRef.current = pos;
 
+      if (tool === 'select') {
+        isDrawingRef.current = false;
+        const strokes = getState().drawingStrokes;
+        const hitIdx = findStrokeAtPosition(strokes, pos.x, pos.y);
+        if (hitIdx !== null) {
+          selectedIndexRef.current = hitIdx;
+          dragStartRef.current = pos;
+          isDraggingRef.current = true;
+        } else {
+          selectedIndexRef.current = null;
+          isDraggingRef.current = false;
+        }
+        redrawViewport();
+        return;
+      }
+
       if (tool === 'pan') {
         const bufPos = getBufferPos(e);
         panStartRef.current = bufPos;
@@ -308,15 +378,28 @@ export default function DiagramCanvas() {
         isDrawingRef.current = false;
 
         // If a text overlay is already visible, commit its value before opening a new one.
-        // We must read the DOM directly because the React component will unmount
-        // (key change) before its blur handler can capture the value.
         if (textOverlayRef.current.visible) {
-          const input = document.getElementById('canvasTextInput') as HTMLInputElement | null;
+          const input = document.getElementById('canvasTextInput') as HTMLTextAreaElement | null;
           const value = input?.value ?? '';
           handleTextCommit(value);
         }
 
-        textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null };
+        // Check if clicking on existing text stroke to edit it
+        const strokes = getState().drawingStrokes;
+        const textIndex = findTextAtPosition(strokes, pos.x, pos.y);
+        if (textIndex !== null) {
+          const stroke = strokes[textIndex];
+          textOverlayRef.current = {
+            visible: true,
+            x: stroke.position!.x,
+            y: stroke.position!.y,
+            shapeIndex: null,
+            editIndex: textIndex,
+            initialText: stroke.text || '',
+          };
+        } else {
+          textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null, editIndex: null, initialText: '' };
+        }
         forceOverlayUpdate();
         return;
       }
@@ -357,11 +440,28 @@ export default function DiagramCanvas() {
         };
       }
     },
-    [getState, getMousePos, getBufferPos, getCanvasBackground, forceOverlayUpdate, handleTextCommit],
+    [getState, getMousePos, getBufferPos, getCanvasBackground, forceOverlayUpdate, handleTextCommit, redrawViewport],
   );
 
   const handleMouseMove = useCallback(
     (e: MouseLikeEvent) => {
+      // Handle select tool drag (isDragging is separate from isDrawing)
+      if (isDraggingRef.current && selectedIndexRef.current !== null) {
+        const pos = getMousePos(e);
+        const dx = pos.x - dragStartRef.current.x;
+        const dy = pos.y - dragStartRef.current.y;
+        if (dx === 0 && dy === 0) return;
+
+        const strokes = getState().drawingStrokes;
+        const idx = selectedIndexRef.current;
+        if (idx >= 0 && idx < strokes.length) {
+          const moved = translateStroke(strokes[idx], dx, dy);
+          getState().updateStrokeAt(idx, moved);
+          dragStartRef.current = pos;
+        }
+        return;
+      }
+
       if (!isDrawingRef.current) return;
       const ctx = ctxRef.current;
       if (!ctx) return;
@@ -442,6 +542,13 @@ export default function DiagramCanvas() {
   );
 
   const handleMouseUp = useCallback(() => {
+    // Handle select tool drag end
+    if (isDraggingRef.current) {
+      isDraggingRef.current = false;
+      // Selection stays active so user can see what they moved
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     const ctx = ctxRef.current;
     const { currentTool: tool } = getState();
@@ -584,7 +691,12 @@ export default function DiagramCanvas() {
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
-  // Convert logical position to screen position for overlay
+  // Convert logical position to screen position for overlay.
+  // Subtract the overlay's CSS padding+border so the text inside the input
+  // aligns exactly with where ctx.fillText will render on the canvas.
+  const OVERLAY_OFFSET_LEFT = 10; // padding-left(8) + border(2)
+  const OVERLAY_OFFSET_TOP = 6;   // padding-top(4) + border(2)
+
   const getOverlayScreenPos = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return { left: 0, top: 0 };
@@ -598,8 +710,8 @@ export default function DiagramCanvas() {
     const cssScaleY = rect.height / canvas.height;
 
     return {
-      left: bufferX * cssScaleX,
-      top: bufferY * cssScaleY,
+      left: bufferX * cssScaleX - OVERLAY_OFFSET_LEFT,
+      top: bufferY * cssScaleY - OVERLAY_OFFSET_TOP,
     };
   }, [getState]);
 
@@ -607,6 +719,8 @@ export default function DiagramCanvas() {
 
   const getCursorStyle = useCallback((): string => {
     switch (currentTool) {
+      case 'select':
+        return 'default';
       case 'pan':
         return 'grab';
       case 'eraser':
@@ -649,7 +763,13 @@ export default function DiagramCanvas() {
           }
         }
       }
-      textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex };
+      if (shapeIndex !== null) {
+        const shape = strokes[shapeIndex];
+        const center = getShapeCenter(shape);
+        textOverlayRef.current = { visible: true, x: center.x, y: center.y, shapeIndex, editIndex: null, initialText: shape.text || '' };
+      } else {
+        textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null, editIndex: null, initialText: '' };
+      }
       forceOverlayUpdate();
     },
     [getMousePos, getState, forceOverlayUpdate],
@@ -678,6 +798,7 @@ export default function DiagramCanvas() {
             position={getOverlayScreenPos()}
             onCommit={handleTextCommit}
             onDismiss={handleTextDismiss}
+            initialText={textOverlayRef.current.initialText}
           />
         )}
         <DrawerLabels canvasRef={canvasRef} />

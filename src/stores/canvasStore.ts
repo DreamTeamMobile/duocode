@@ -17,6 +17,7 @@ interface CanvasState {
   zoom: number;
   panOffset: Point;
   drawingStrokes: Stroke[];
+  strokeVersion: number;
   undoHistory: Stroke[][];
   redoHistory: Stroke[][];
   remoteDrawers: Record<string, RemoteDrawer>;
@@ -48,6 +49,7 @@ const initialState: CanvasState = {
   zoom: 1,
   panOffset: { x: 0, y: 0 },
   drawingStrokes: [],
+  strokeVersion: 0,
   undoHistory: [],
   redoHistory: [],
   remoteDrawers: {},
@@ -117,7 +119,7 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
       if (index < 0 || index >= state.drawingStrokes.length) return state;
       const drawingStrokes = [...state.drawingStrokes];
       drawingStrokes[index] = { ...drawingStrokes[index], ...updates };
-      return { drawingStrokes };
+      return { drawingStrokes, strokeVersion: state.strokeVersion + 1 };
     }),
 
   updateRemoteDrawer: (peerId, data) =>

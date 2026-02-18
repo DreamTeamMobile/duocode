@@ -119,6 +119,10 @@ GitHub Actions (`.github/workflows/ci.yml`): pushes and PRs to `main` run unit t
 
 See `docs/DEPLOYMENT.md` for full deployment instructions. The frontend builds to `dist/` and can be served by any static file server. The signaling server runs as a Node.js process. Services can be managed with systemd or PM2. Health check: `curl http://localhost:3001/health`.
 
+## Commit Rules
+
+- Do NOT include `Co-Authored-By` lines in commit messages. Commits should only show the git-configured user as author.
+
 ## Environment Variables
 
 - `PORT` (server, default 3001) — signaling server port
