@@ -9,6 +9,7 @@ interface TextInputOverlayProps {
 export default function TextInputOverlay({ position, onCommit, onDismiss }: TextInputOverlayProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const mountedAtRef = useRef(Date.now());
+  const committedRef = useRef(false);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -18,8 +19,10 @@ export default function TextInputOverlay({ position, onCommit, onDismiss }: Text
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter') {
         e.preventDefault();
+        committedRef.current = true;
         onCommit(inputRef.current?.value ?? '');
       } else if (e.key === 'Escape') {
+        committedRef.current = true;
         onDismiss();
       }
     },
@@ -27,6 +30,9 @@ export default function TextInputOverlay({ position, onCommit, onDismiss }: Text
   );
 
   const handleBlur = useCallback(() => {
+    // Already committed via Enter/Escape — skip to avoid double-commit
+    if (committedRef.current) return;
+
     // Re-focus if blur happens within 300ms of mount — prevents the mouseup
     // from the initial canvas click from stealing focus
     if (Date.now() - mountedAtRef.current < 300) {

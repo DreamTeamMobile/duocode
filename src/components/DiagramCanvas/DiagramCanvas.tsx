@@ -245,6 +245,43 @@ export default function DiagramCanvas() {
   const [overlayKey, setOverlayKey] = useState(0);
   const forceOverlayUpdate = useCallback(() => setOverlayKey((k) => k + 1), []);
 
+  // ── Text overlay handlers (before mouse handlers that reference them) ──
+
+  const handleTextCommit = useCallback(
+    (text: string) => {
+      if (!text.trim()) {
+        textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+        forceOverlayUpdate();
+        return;
+      }
+
+      const { shapeIndex } = textOverlayRef.current;
+      if (shapeIndex !== null) {
+        // Add text to existing shape
+        getState().updateStrokeAt(shapeIndex, { text });
+      } else {
+        // Create standalone text stroke
+        const { strokeColor: color } = getState();
+        const stroke: Stroke = {
+          tool: 'text',
+          text,
+          color,
+          position: { x: textOverlayRef.current.x, y: textOverlayRef.current.y },
+          fontSize: DEFAULT_FONT_SIZE,
+        };
+        getState().addStroke(stroke);
+      }
+      textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+      forceOverlayUpdate();
+    },
+    [getState, forceOverlayUpdate],
+  );
+
+  const handleTextDismiss = useCallback(() => {
+    textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
+    forceOverlayUpdate();
+  }, [forceOverlayUpdate]);
+
   // ── Mouse event handlers ───────────────────────────────────────────
 
   const handleMouseDown = useCallback(
@@ -269,6 +306,16 @@ export default function DiagramCanvas() {
 
       if (tool === 'text') {
         isDrawingRef.current = false;
+
+        // If a text overlay is already visible, commit its value before opening a new one.
+        // We must read the DOM directly because the React component will unmount
+        // (key change) before its blur handler can capture the value.
+        if (textOverlayRef.current.visible) {
+          const input = document.getElementById('canvasTextInput') as HTMLInputElement | null;
+          const value = input?.value ?? '';
+          handleTextCommit(value);
+        }
+
         textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null };
         forceOverlayUpdate();
         return;
@@ -310,7 +357,7 @@ export default function DiagramCanvas() {
         };
       }
     },
-    [getState, getMousePos, getBufferPos, getCanvasBackground, forceOverlayUpdate],
+    [getState, getMousePos, getBufferPos, getCanvasBackground, forceOverlayUpdate, handleTextCommit],
   );
 
   const handleMouseMove = useCallback(
@@ -536,43 +583,6 @@ export default function DiagramCanvas() {
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
-
-  // ── Text overlay handlers ──────────────────────────────────────────
-
-  const handleTextCommit = useCallback(
-    (text: string) => {
-      if (!text.trim()) {
-        textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
-        forceOverlayUpdate();
-        return;
-      }
-
-      const { shapeIndex } = textOverlayRef.current;
-      if (shapeIndex !== null) {
-        // Add text to existing shape
-        getState().updateStrokeAt(shapeIndex, { text });
-      } else {
-        // Create standalone text stroke
-        const { strokeColor: color } = getState();
-        const stroke: Stroke = {
-          tool: 'text',
-          text,
-          color,
-          position: { x: textOverlayRef.current.x, y: textOverlayRef.current.y },
-          fontSize: DEFAULT_FONT_SIZE,
-        };
-        getState().addStroke(stroke);
-      }
-      textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
-      forceOverlayUpdate();
-    },
-    [getState, forceOverlayUpdate],
-  );
-
-  const handleTextDismiss = useCallback(() => {
-    textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null };
-    forceOverlayUpdate();
-  }, [forceOverlayUpdate]);
 
   // Convert logical position to screen position for overlay
   const getOverlayScreenPos = useCallback(() => {
