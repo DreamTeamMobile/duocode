@@ -132,8 +132,8 @@ export default function DiagramCanvas() {
   // ── Rendering ──────────────────────────────────────────────────────
 
   const renderStrokes = useCallback(
-    (ctx: CanvasRenderingContext2D, strokes: Stroke[]) => {
-      strokes.forEach((stroke) => {
+    (ctx: CanvasRenderingContext2D, strokes: Stroke[], editingShapeIndex?: number | null) => {
+      strokes.forEach((stroke, idx) => {
         if (stroke.tool === 'text' && stroke.text && stroke.position) {
           const fontSize = stroke.fontSize || DEFAULT_FONT_SIZE;
           ctx.font = `${fontSize}px sans-serif`;
@@ -165,7 +165,7 @@ export default function DiagramCanvas() {
             const w = stroke.end.x - stroke.start.x;
             const h = stroke.end.y - stroke.start.y;
             ctx.strokeRect(stroke.start.x, stroke.start.y, w, h);
-            if (stroke.text) {
+            if (stroke.text && idx !== editingShapeIndex) {
               ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
@@ -179,7 +179,7 @@ export default function DiagramCanvas() {
             );
             ctx.arc(stroke.start.x, stroke.start.y, radius, 0, 2 * Math.PI);
             ctx.stroke();
-            if (stroke.text) {
+            if (stroke.text && idx !== editingShapeIndex) {
               ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
@@ -272,7 +272,7 @@ export default function DiagramCanvas() {
     ctx.fillStyle = getCanvasBackground();
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    renderStrokes(ctx, strokes);
+    renderStrokes(ctx, strokes, textOverlayRef.current.visible ? textOverlayRef.current.shapeIndex : null);
     saveToBuffer();
     redrawViewport();
   }, [getState, getCanvasBackground, renderStrokes, saveToBuffer, redrawViewport]);
