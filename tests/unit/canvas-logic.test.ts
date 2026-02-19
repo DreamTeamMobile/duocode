@@ -206,9 +206,14 @@ describe('filterStrokesAfterErase', () => {
     expect(result).toHaveLength(0);
   });
 
-  it('should keep rect stroke when no endpoint is within radius', () => {
-    // Rect does not check midpoint (only line does)
+  it('should erase rect stroke when point is inside', () => {
+    // (250,250) is inside rect (200,200)→(300,300)
     const result = filterStrokesAfterErase([rectStroke], 250, 250, 5);
+    expect(result).toHaveLength(0);
+  });
+
+  it('should keep rect stroke when far outside', () => {
+    const result = filterStrokesAfterErase([rectStroke], 500, 500, 5);
     expect(result).toHaveLength(1);
   });
 

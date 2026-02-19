@@ -34,6 +34,107 @@ export const codeTemplates: Record<string, string> = {
     sql: '-- Write your SQL query here\nSELECT * FROM users WHERE id = 1;'
 };
 
+// ── Indentation helpers ─────────────────────────────────────────────────────
+
+export interface DedentResult {
+    text: string;
+    newStart: number;
+    newEnd: number;
+}
+
+/**
+ * Remove up to 4 leading spaces from each line touched by the selection.
+ * Only removes space characters (' '), not tabs or other whitespace.
+ * Returns the new full text and adjusted selection positions.
+ */
+export function dedentLines(
+    text: string,
+    selectionStart: number,
+    selectionEnd: number,
+): DedentResult {
+    const lines = text.split('\n');
+
+    // Find which lines are touched by the selection
+    let charCount = 0;
+    let startLine = 0;
+    let endLine = lines.length - 1;
+
+    for (let i = 0; i < lines.length; i++) {
+        const lineEnd = charCount + lines[i].length;
+        if (charCount <= selectionStart && selectionStart <= lineEnd + 1) {
+            startLine = i;
+        }
+        if (charCount <= selectionEnd && selectionEnd <= lineEnd + 1) {
+            endLine = i;
+            break;
+        }
+        charCount += lines[i].length + 1; // +1 for '\n'
+    }
+
+    // For cursor with no selection, just dedent the current line
+    if (selectionStart === selectionEnd) {
+        endLine = startLine;
+    }
+
+    // Track total characters removed before start and end positions
+    let removedBeforeStart = 0;
+    let removedBeforeEnd = 0;
+    let removedSoFar = 0;
+    let currentOffset = 0;
+
+    const newLines = lines.map((line, i) => {
+        const lineStart = currentOffset;
+        currentOffset += line.length + 1;
+
+        if (i < startLine || i > endLine) return line;
+
+        // Count leading spaces (up to 4)
+        let spacesToRemove = 0;
+        while (spacesToRemove < 4 && spacesToRemove < line.length && line[spacesToRemove] === ' ') {
+            spacesToRemove++;
+        }
+
+        if (spacesToRemove === 0) return line;
+
+        // Track how removal affects cursor positions
+        if (lineStart + spacesToRemove <= selectionStart) {
+            removedBeforeStart += spacesToRemove;
+        } else if (lineStart < selectionStart) {
+            removedBeforeStart += selectionStart - lineStart;
+        }
+
+        if (lineStart + spacesToRemove <= selectionEnd) {
+            removedBeforeEnd += spacesToRemove;
+        } else if (lineStart < selectionEnd) {
+            removedBeforeEnd += selectionEnd - lineStart;
+        }
+
+        removedSoFar += spacesToRemove;
+        return line.substring(spacesToRemove);
+    });
+
+    return {
+        text: newLines.join('\n'),
+        newStart: Math.max(0, selectionStart - removedBeforeStart),
+        newEnd: Math.max(0, selectionEnd - removedBeforeEnd),
+    };
+}
+
+/**
+ * Get the leading whitespace of the line containing the cursor.
+ * Used for auto-indent on Enter: new line starts at the same indentation.
+ */
+export function getLeadingWhitespace(text: string, cursorPos: number): string {
+    // Find the start of the current line
+    const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+    // Extract leading whitespace
+    let i = lineStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\t')) {
+        i++;
+    }
+    return text.substring(lineStart, i);
+}
+
 // Map language identifiers to Prism grammar names
 // Currently all supported languages use the same identifier,
 // but this provides an extension point for future mismatches

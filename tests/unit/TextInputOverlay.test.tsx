@@ -26,11 +26,11 @@ describe('TextInputOverlay', () => {
     expect(document.activeElement).toBe(input);
   });
 
-  it('calls onCommit with text when Enter is pressed', () => {
+  it('calls onCommit with text when Ctrl+Enter is pressed', () => {
     render(<TextInputOverlay {...defaultProps} />);
     const input = screen.getByPlaceholderText('Enter text...');
     fireEvent.change(input, { target: { value: 'Hello' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true });
     expect(defaultProps.onCommit).toHaveBeenCalledWith('Hello');
   });
 
