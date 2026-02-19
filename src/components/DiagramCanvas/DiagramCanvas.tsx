@@ -11,7 +11,6 @@ import {
   applyCanvasTransform,
   reconcileCoordinates,
   filterStrokesAfterErase,
-  getShapeCenter,
   findTextAtPosition,
   findStrokeAtPosition,
   getStrokeBounds,
@@ -31,6 +30,8 @@ interface TextOverlayState {
   shapeIndex: number | null;
   editIndex: number | null;
   initialText: string;
+  shapeWidth?: number;
+  shapeHeight?: number;
 }
 
 interface MouseLikeEvent {
@@ -59,6 +60,10 @@ export default function DiagramCanvas() {
   const selectedIndexRef = useRef<number | null>(null);
   const dragStartRef = useRef<Point>({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
+
+  // Eraser trail refs
+  const eraserTrailRef = useRef<Point[]>([]);
+  const eraserRadiusRef = useRef(0);
 
   // Text overlay state
   const textOverlayRef = useRef<TextOverlayState>({ visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' });
@@ -131,8 +136,8 @@ export default function DiagramCanvas() {
   // ── Rendering ──────────────────────────────────────────────────────
 
   const renderStrokes = useCallback(
-    (ctx: CanvasRenderingContext2D, strokes: Stroke[]) => {
-      strokes.forEach((stroke) => {
+    (ctx: CanvasRenderingContext2D, strokes: Stroke[], editingShapeIndex?: number | null) => {
+      strokes.forEach((stroke, idx) => {
         if (stroke.tool === 'text' && stroke.text && stroke.position) {
           const fontSize = stroke.fontSize || DEFAULT_FONT_SIZE;
           ctx.font = `${fontSize}px sans-serif`;
@@ -164,12 +169,20 @@ export default function DiagramCanvas() {
             const w = stroke.end.x - stroke.start.x;
             const h = stroke.end.y - stroke.start.y;
             ctx.strokeRect(stroke.start.x, stroke.start.y, w, h);
-            if (stroke.text) {
-              ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
+            if (stroke.text && idx !== editingShapeIndex) {
+              const fontSize = DEFAULT_FONT_SIZE;
+              ctx.font = `${fontSize}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(stroke.text, stroke.start.x + w / 2, stroke.start.y + h / 2);
+              const lines = stroke.text.split('\n');
+              const lineHeight = fontSize * 1.3;
+              const totalHeight = lines.length * lineHeight;
+              const centerX = stroke.start.x + w / 2;
+              const startY = stroke.start.y + h / 2 - totalHeight / 2 + lineHeight / 2;
+              lines.forEach((line, li) => {
+                ctx.fillText(line, centerX, startY + li * lineHeight);
+              });
               ctx.textAlign = 'left';
             }
           } else if (stroke.tool === 'circle' && stroke.start && stroke.end) {
@@ -178,12 +191,20 @@ export default function DiagramCanvas() {
             );
             ctx.arc(stroke.start.x, stroke.start.y, radius, 0, 2 * Math.PI);
             ctx.stroke();
-            if (stroke.text) {
-              ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
+            if (stroke.text && idx !== editingShapeIndex) {
+              const fontSize = DEFAULT_FONT_SIZE;
+              ctx.font = `${fontSize}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(stroke.text, stroke.start.x, stroke.start.y);
+              const lines = stroke.text.split('\n');
+              const lineHeight = fontSize * 1.3;
+              const totalHeight = lines.length * lineHeight;
+              const cx = stroke.start.x;
+              const startY = stroke.start.y - totalHeight / 2 + lineHeight / 2;
+              lines.forEach((line, li) => {
+                ctx.fillText(line, cx, startY + li * lineHeight);
+              });
               ctx.textAlign = 'left';
             }
           }
@@ -230,6 +251,32 @@ export default function DiagramCanvas() {
     bufferCtx?.drawImage(canvas, 0, 0);
   }, []);
 
+  const drawEraserTrail = useCallback((ctx: CanvasRenderingContext2D) => {
+    const trail = eraserTrailRef.current;
+    if (trail.length < 2) return;
+    const r = eraserRadiusRef.current;
+
+    ctx.save();
+    // Draw fading trail circles along the path
+    const len = trail.length;
+    for (let i = 0; i < len; i++) {
+      const t = i / len; // 0 at oldest, ~1 at newest
+      const alpha = t * 0.25; // fade from transparent to 0.25
+      ctx.beginPath();
+      ctx.arc(trail[i].x, trail[i].y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(150, 150, 150, ${alpha})`;
+      ctx.fill();
+    }
+    // Draw a solid circle at the current position
+    const last = trail[len - 1];
+    ctx.beginPath();
+    ctx.arc(last.x, last.y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(120, 120, 120, 0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }, []);
+
   const redrawViewport = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
@@ -253,9 +300,14 @@ export default function DiagramCanvas() {
       ctx.drawImage(buffer, 0, 0);
     }
 
+    // Draw eraser trail on top if actively erasing
+    if (eraserTrailRef.current.length > 0) {
+      drawEraserTrail(ctx);
+    }
+
     // Draw selection highlight on top (not baked into buffer)
     renderSelection(ctx, strokes);
-  }, [getState, getCanvasBackground, renderSelection]);
+  }, [getState, getCanvasBackground, renderSelection, drawEraserTrail]);
 
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
@@ -271,7 +323,7 @@ export default function DiagramCanvas() {
     ctx.fillStyle = getCanvasBackground();
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    renderStrokes(ctx, strokes);
+    renderStrokes(ctx, strokes, textOverlayRef.current.visible ? textOverlayRef.current.shapeIndex : null);
     saveToBuffer();
     redrawViewport();
   }, [getState, getCanvasBackground, renderStrokes, saveToBuffer, redrawViewport]);
@@ -302,6 +354,7 @@ export default function DiagramCanvas() {
     (text: string) => {
       if (!text.trim()) {
         textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+        selectedIndexRef.current = null;
         forceOverlayUpdate();
         return;
       }
@@ -326,6 +379,7 @@ export default function DiagramCanvas() {
         getState().addStroke(stroke);
       }
       textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+      selectedIndexRef.current = null;
       forceOverlayUpdate();
     },
     [getState, forceOverlayUpdate],
@@ -333,6 +387,7 @@ export default function DiagramCanvas() {
 
   const handleTextDismiss = useCallback(() => {
     textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+    selectedIndexRef.current = null;
     forceOverlayUpdate();
   }, [forceOverlayUpdate]);
 
@@ -405,15 +460,9 @@ export default function DiagramCanvas() {
       }
 
       if (tool === 'eraser') {
-        // Apply transform before drawing the eraser path
-        const { zoom: z, panOffset: pan } = getState();
-        applyCanvasTransform(ctx, z, pan.x, pan.y);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        ctx.strokeStyle = getCanvasBackground();
-        ctx.lineWidth = width * 3;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        const eraseRadius = width * 3;
+        eraserTrailRef.current = [{ x: pos.x, y: pos.y }];
+        eraserRadiusRef.current = eraseRadius;
         return;
       }
 
@@ -483,20 +532,28 @@ export default function DiagramCanvas() {
 
       if (tool === 'eraser') {
         const eraseRadius = width * 3;
-        ctx.lineTo(pos.x, pos.y);
-        ctx.strokeStyle = getCanvasBackground();
-        ctx.lineWidth = eraseRadius * 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
+        eraserTrailRef.current.push({ x: pos.x, y: pos.y });
+        // Keep trail length bounded for performance
+        if (eraserTrailRef.current.length > 60) {
+          eraserTrailRef.current = eraserTrailRef.current.slice(-40);
+        }
 
         const { drawingStrokes: strokes } = getState();
         const remaining = filterStrokesAfterErase(strokes, pos.x, pos.y, eraseRadius);
         if (remaining.length !== strokes.length) {
           getState().setStrokes(remaining);
+          // Rebuild buffer without erased strokes so viewport shows them removed
+          const canvas = canvasRef.current;
+          if (canvas) {
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = getCanvasBackground();
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            renderStrokes(ctx, remaining, null);
+            saveToBuffer();
+          }
         }
+        redrawViewport();
         return;
       }
 
@@ -538,7 +595,7 @@ export default function DiagramCanvas() {
         }
       }
     },
-    [getState, getMousePos, getBufferPos, getCanvasBackground, redrawAll, redrawViewport],
+    [getState, getMousePos, getBufferPos, getCanvasBackground, redrawAll, redrawViewport, renderStrokes, saveToBuffer],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -569,7 +626,9 @@ export default function DiagramCanvas() {
 
     if (tool === 'eraser') {
       isDrawingRef.current = false;
-      saveToBuffer();
+      eraserTrailRef.current = [];
+      // Redraw cleanly from remaining strokes so eraser trail disappears
+      redrawAll();
       return;
     }
 
@@ -578,13 +637,24 @@ export default function DiagramCanvas() {
     }
 
     if (currentStrokeRef.current) {
+      // Don't save degenerate shape strokes (click without drag / double-click artifacts)
+      const s = currentStrokeRef.current;
+      if (s.start && s.end) {
+        const dx = Math.abs(s.end.x - s.start.x);
+        const dy = Math.abs(s.end.y - s.start.y);
+        if (dx < 3 && dy < 3) {
+          currentStrokeRef.current = null;
+          isDrawingRef.current = false;
+          return;
+        }
+      }
       getState().addStroke(currentStrokeRef.current);
       currentStrokeRef.current = null;
     }
 
     isDrawingRef.current = false;
     saveToBuffer();
-  }, [getState, saveToBuffer]);
+  }, [getState, saveToBuffer, redrawAll]);
 
   // ── Wheel zoom ─────────────────────────────────────────────────────
 
@@ -697,7 +767,7 @@ export default function DiagramCanvas() {
   const OVERLAY_OFFSET_LEFT = 10; // padding-left(8) + border(2)
   const OVERLAY_OFFSET_TOP = 6;   // padding-top(4) + border(2)
 
-  const getOverlayScreenPos = useCallback(() => {
+  const getOverlayScreenPos = useCallback((): { left: number; top: number; width?: number; height?: number } => {
     const canvas = canvasRef.current;
     if (!canvas) return { left: 0, top: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -708,6 +778,17 @@ export default function DiagramCanvas() {
 
     const cssScaleX = rect.width / canvas.width;
     const cssScaleY = rect.height / canvas.height;
+
+    const isShapeEditing = textOverlayRef.current.shapeIndex !== null;
+
+    if (isShapeEditing && textOverlayRef.current.shapeWidth != null && textOverlayRef.current.shapeHeight != null) {
+      return {
+        left: bufferX * cssScaleX,
+        top: bufferY * cssScaleY,
+        width: textOverlayRef.current.shapeWidth * z * cssScaleX,
+        height: textOverlayRef.current.shapeHeight * z * cssScaleY,
+      };
+    }
 
     return {
       left: bufferX * cssScaleX - OVERLAY_OFFSET_LEFT,
@@ -765,14 +846,26 @@ export default function DiagramCanvas() {
       }
       if (shapeIndex !== null) {
         const shape = strokes[shapeIndex];
-        const center = getShapeCenter(shape);
-        textOverlayRef.current = { visible: true, x: center.x, y: center.y, shapeIndex, editIndex: null, initialText: shape.text || '' };
+        const bounds = getStrokeBounds(shape);
+        textOverlayRef.current = {
+          visible: true,
+          x: bounds.minX,
+          y: bounds.minY,
+          shapeIndex,
+          editIndex: null,
+          initialText: shape.text || '',
+          shapeWidth: bounds.maxX - bounds.minX,
+          shapeHeight: bounds.maxY - bounds.minY,
+        };
+        // Show selection highlight on the shape being edited
+        selectedIndexRef.current = shapeIndex;
+        redrawAll();
       } else {
         textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null, editIndex: null, initialText: '' };
       }
       forceOverlayUpdate();
     },
-    [getMousePos, getState, forceOverlayUpdate],
+    [getMousePos, getState, forceOverlayUpdate, redrawAll],
   );
 
   return (
@@ -799,6 +892,7 @@ export default function DiagramCanvas() {
             onCommit={handleTextCommit}
             onDismiss={handleTextDismiss}
             initialText={textOverlayRef.current.initialText}
+            shapeEditing={textOverlayRef.current.shapeIndex !== null}
           />
         )}
         <DrawerLabels canvasRef={canvasRef} />

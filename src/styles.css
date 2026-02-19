@@ -1221,6 +1221,29 @@ button:disabled {
     box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
 }
 
+.text-input-overlay.shape-editing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.text-input-overlay.shape-editing textarea {
+    border: none;
+    background: transparent;
+    text-align: center;
+    width: 300%;
+    min-width: 300%;
+    max-width: none;
+    resize: none;
+    overflow: hidden;
+    padding: 0;
+}
+
+.text-input-overlay.shape-editing textarea:focus {
+    box-shadow: none;
+}
+
 /* Messages FAB Button — hidden on desktop where the sidebar panel is always visible */
 .messages-fab {
     position: fixed;
@@ -1412,6 +1435,7 @@ button:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     margin-bottom: 6px;
     font-size: 12px;
 }

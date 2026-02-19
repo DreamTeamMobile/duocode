@@ -57,20 +57,14 @@ export function useSessionInit(): void {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Step 2: once session exists, restore or prompt for name ──────
+  // ── Step 2: once session exists, always prompt for name ──────────
   useEffect(() => {
     if (!sessionId || peerName) return;
 
-    // Only auto-restore if the user already confirmed their name
-    // for THIS specific session (i.e. they've been here before).
-    const sessionSpecificName = localStorage.getItem(getSessionNameKey(sessionId));
-    if (sessionSpecificName) {
-      setPeerName(sessionSpecificName);
-    } else {
-      // New session — always show the name modal so the user can
-      // confirm / enter their name (pre-fill happens in the modal).
-      showNameModal();
-    }
+    // Always show the name modal on a fresh tab so each tab acts as
+    // a unique participant.  The modal pre-fills from localStorage so
+    // returning users can just click Join.
+    showNameModal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId]);
 

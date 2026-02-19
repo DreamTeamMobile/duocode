@@ -53,8 +53,8 @@ describe('useSessionInit', () => {
     unmount();
   });
 
-  it('restores saved name and skips modal', () => {
-    // Pre-save a session-specific name (only session-specific names auto-restore)
+  it('always shows name modal even when saved name exists', () => {
+    // Pre-save a session-specific name
     const sessionId = 'preexisting1';
     localStorage.setItem(`duocode_session_name_${sessionId}`, 'SavedUser');
 
@@ -63,9 +63,9 @@ describe('useSessionInit', () => {
 
     const { unmount } = renderHook(() => useSessionInit());
 
-    const session = useSessionStore.getState();
-    expect(session.peerName).toBe('SavedUser');
-    expect(useUIStore.getState().isNameModalOpen).toBe(false);
+    // Each tab should prompt for name (modal pre-fills from localStorage)
+    expect(useSessionStore.getState().peerName).toBeNull();
+    expect(useUIStore.getState().isNameModalOpen).toBe(true);
 
     unmount();
   });

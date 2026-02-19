@@ -1,13 +1,14 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 interface TextInputOverlayProps {
-  position: { left: number; top: number };
+  position: { left: number; top: number; width?: number; height?: number };
   onCommit: (text: string) => void;
   onDismiss: () => void;
   initialText?: string;
+  shapeEditing?: boolean;
 }
 
-export default function TextInputOverlay({ position, onCommit, onDismiss, initialText }: TextInputOverlayProps) {
+export default function TextInputOverlay({ position, onCommit, onDismiss, initialText, shapeEditing }: TextInputOverlayProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const mountedAtRef = useRef(Date.now());
   const committedRef = useRef(false);
@@ -20,6 +21,9 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
       el.value = initialText;
       // Place cursor at end
       el.selectionStart = el.selectionEnd = initialText.length;
+      // Auto-resize to fit all lines of initial text
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -55,20 +59,25 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
   }, [onCommit, onDismiss]);
 
   const handleInput = useCallback(() => {
-    // Auto-resize textarea height to fit content
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
   }, []);
 
+  const overlayStyle: React.CSSProperties = {
+    left: `${position.left}px`,
+    top: `${position.top}px`,
+  };
+  if (shapeEditing && position.width != null && position.height != null) {
+    overlayStyle.width = `${position.width}px`;
+    overlayStyle.height = `${position.height}px`;
+  }
+
   return (
     <div
-      className="text-input-overlay"
-      style={{
-        left: `${position.left}px`,
-        top: `${position.top}px`,
-      }}
+      className={`text-input-overlay${shapeEditing ? ' shape-editing' : ''}`}
+      style={overlayStyle}
     >
       <textarea
         ref={inputRef}
