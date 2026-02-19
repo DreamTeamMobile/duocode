@@ -21,6 +21,9 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
       el.value = initialText;
       // Place cursor at end
       el.selectionStart = el.selectionEnd = initialText.length;
+      // Auto-resize to fit all lines of initial text
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

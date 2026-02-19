@@ -149,6 +149,22 @@ describe('TextInputOverlay multi-line editing', () => {
     const textarea = screen.getByPlaceholderText('Enter text...') as HTMLTextAreaElement;
     expect(textarea.value).toBe('Line A\nLine B\nLine C');
   });
+
+  it('should auto-resize textarea on mount when initialText has multiple lines', () => {
+    const { container } = render(
+      <TextInputOverlay
+        {...defaultProps}
+        shapeEditing
+        initialText={'Line 1\nLine 2\nLine 3'}
+        position={{ left: 0, top: 0, width: 200, height: 100 }}
+      />,
+    );
+    const textarea = container.querySelector('textarea') as HTMLTextAreaElement;
+
+    // After mount with multi-line initialText, height should be set
+    // (not left at default single-row height)
+    expect(textarea.style.height).not.toBe('');
+  });
 });
 
 describe('TextInputOverlay overlay dimensions for shape editing', () => {
