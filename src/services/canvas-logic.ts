@@ -140,6 +140,19 @@ export function reconcileCoordinates(
 
 // ── Drawing / Shape Helpers ─────────────────────────────────────────────────
 
+/** Distance from point (px,py) to the line segment (ax,ay)→(bx,by). */
+function pointToSegmentDist(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.sqrt((px - ax) ** 2 + (py - ay) ** 2);
+  let t = ((px - ax) * dx + (py - ay) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = ax + t * dx;
+  const projY = ay + t * dy;
+  return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+}
+
 export function filterStrokesAfterErase(
   strokes: Stroke[],
   x: number,
@@ -152,17 +165,50 @@ export function filterStrokesAfterErase(
         const dist = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
         return dist < eraseRadius;
       });
-    } else if (stroke.start && stroke.end) {
-      const startDist = Math.sqrt((stroke.start.x - x) ** 2 + (stroke.start.y - y) ** 2);
-      const endDist = Math.sqrt((stroke.end.x - x) ** 2 + (stroke.end.y - y) ** 2);
-      if (stroke.tool === 'line') {
-        const midX = (stroke.start.x + stroke.end.x) / 2;
-        const midY = (stroke.start.y + stroke.end.y) / 2;
-        const midDist = Math.sqrt((midX - x) ** 2 + (midY - y) ** 2);
-        return startDist >= eraseRadius && endDist >= eraseRadius && midDist >= eraseRadius;
-      }
-      return startDist >= eraseRadius && endDist >= eraseRadius;
     }
+
+    if (stroke.tool === 'text' && stroke.position) {
+      const bounds = getStrokeBounds(stroke);
+      // Hit if within or near the bounding box
+      return !(
+        x >= bounds.minX - eraseRadius && x <= bounds.maxX + eraseRadius &&
+        y >= bounds.minY - eraseRadius && y <= bounds.maxY + eraseRadius
+      );
+    }
+
+    if (stroke.tool === 'circle' && stroke.start && stroke.end) {
+      const radius = Math.sqrt(
+        (stroke.end.x - stroke.start.x) ** 2 + (stroke.end.y - stroke.start.y) ** 2
+      );
+      const dist = Math.sqrt((x - stroke.start.x) ** 2 + (y - stroke.start.y) ** 2);
+      // Hit if within the circle or near its perimeter
+      return dist > radius + eraseRadius;
+    }
+
+    if (stroke.tool === 'rectangle' && stroke.start && stroke.end) {
+      const minX = Math.min(stroke.start.x, stroke.end.x);
+      const maxX = Math.max(stroke.start.x, stroke.end.x);
+      const minY = Math.min(stroke.start.y, stroke.end.y);
+      const maxY = Math.max(stroke.start.y, stroke.end.y);
+
+      // Hit if inside the rectangle
+      if (x >= minX && x <= maxX && y >= minY && y <= maxY) return false;
+
+      // Hit if near any of the 4 edges
+      const topDist = pointToSegmentDist(x, y, minX, minY, maxX, minY);
+      const bottomDist = pointToSegmentDist(x, y, minX, maxY, maxX, maxY);
+      const leftDist = pointToSegmentDist(x, y, minX, minY, minX, maxY);
+      const rightDist = pointToSegmentDist(x, y, maxX, minY, maxX, maxY);
+
+      return Math.min(topDist, bottomDist, leftDist, rightDist) >= eraseRadius;
+    }
+
+    if (stroke.tool === 'line' && stroke.start && stroke.end) {
+      const dist = pointToSegmentDist(x, y, stroke.start.x, stroke.start.y, stroke.end.x, stroke.end.y);
+      return dist >= eraseRadius;
+    }
+
+    // Unknown stroke type — don't erase
     return true;
   });
 }
