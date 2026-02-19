@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, ChangeEvent } from 'react';
+import { useRef, useCallback, useEffect, ChangeEvent, KeyboardEvent } from 'react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-python';
@@ -46,6 +46,36 @@ export default function CodeEditor() {
     [setCode, applyLocalOperation],
   );
 
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const textarea = inputRef.current;
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const oldCode = textarea.value;
+        const spaces = '    ';
+        const newCode = oldCode.substring(0, start) + spaces + oldCode.substring(end);
+
+        calculateTextOperation(oldCode, newCode);
+        applyLocalOperation();
+        setCode(newCode);
+        prevCodeRef.current = newCode;
+
+        // Restore cursor position after the inserted spaces
+        requestAnimationFrame(() => {
+          if (inputRef.current) {
+            inputRef.current.selectionStart = start + spaces.length;
+            inputRef.current.selectionEnd = start + spaces.length;
+          }
+        });
+      }
+    },
+    [setCode, applyLocalOperation],
+  );
+
   // Keep prevCodeRef in sync with external code changes (remote operations)
   useEffect(() => {
     prevCodeRef.current = code;
@@ -73,6 +103,7 @@ export default function CodeEditor() {
         ref={inputRef}
         value={code}
         onChange={handleInput}
+        onKeyDown={handleKeyDown}
         onScroll={handleScroll}
         spellCheck={false}
         autoCapitalize="off"
