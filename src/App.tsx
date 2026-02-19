@@ -13,6 +13,7 @@ import { useWebRTC } from './hooks/useWebRTC';
 import { useCodeSync } from './hooks/useCodeSync';
 import { useCanvasSync } from './hooks/useCanvasSync';
 import { useMessageSync } from './hooks/useMessageSync';
+import { useExecutionSync } from './hooks/useExecutionSync';
 import { usePersistence } from './hooks/usePersistence';
 import { useSessionInit } from './hooks/useSessionInit';
 import { installDuoCodeDebug } from './services/debug-utility';
@@ -46,6 +47,7 @@ function App() {
   const { handleMessage: handleCodeMessage } = useCodeSync({ sendMessage: stableSend });
   const { handleMessage: handleCanvasMessage } = useCanvasSync({ sendMessage: stableSend });
   const { handleMessage: handleChatMessage } = useMessageSync({ sendMessage: stableSend });
+  const { handleMessage: handleExecutionMessage } = useExecutionSync({ sendMessage: stableSend });
 
   // Route incoming data-channel messages to the appropriate sync hook
   const onMessage = useCallback(
@@ -72,6 +74,11 @@ function App() {
           handleChatMessage(message);
           break;
 
+        case 'execution-start':
+        case 'execution-result':
+          handleExecutionMessage(message);
+          break;
+
         case 'state-request':
           handleCodeMessage(message);
           handleCanvasMessage(message);
@@ -85,7 +92,7 @@ function App() {
           break;
       }
     },
-    [handleCodeMessage, handleCanvasMessage, handleChatMessage]
+    [handleCodeMessage, handleCanvasMessage, handleChatMessage, handleExecutionMessage]
   );
 
   // WebRTC connection lifecycle — populates sendRef when the data channel opens

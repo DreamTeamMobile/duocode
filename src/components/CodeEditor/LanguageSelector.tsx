@@ -1,5 +1,6 @@
 import { useEditorStore } from '../../stores/editorStore';
 import { codeTemplates } from '../../services/code-editor-logic';
+import { isExecutable } from '../../services/code-executor';
 
 const LANGUAGES = Object.keys(codeTemplates);
 
@@ -34,7 +35,7 @@ export default function LanguageSelector() {
       >
         {LANGUAGES.map((lang) => (
           <option key={lang} value={lang}>
-            {LANGUAGE_LABELS[lang] || lang}
+            {isExecutable(lang) ? '\u25B6 ' : ''}{LANGUAGE_LABELS[lang] || lang}
           </option>
         ))}
       </select>

@@ -29,7 +29,9 @@ export type DataChannelMessage =
   | { type: 'canvas-clear' }
   | { type: 'canvas-sync'; strokes: Stroke[]; zoom?: number; panOffset?: Point }
   | { type: 'message'; id: string; text: string; sender: string; timestamp: number }
-  | { type: 'message-ack'; messageId: string };
+  | { type: 'message-ack'; messageId: string }
+  | { type: 'execution-start'; language: string; timestamp: number }
+  | { type: 'execution-result'; stdout: string; stderr: string; exitCode: number; duration: number };
 
 export interface ConnectionManagerOptions {
     stunServers?: RTCIceServer[];
