@@ -200,9 +200,42 @@ describe('Eraser hit-testing', () => {
       expect(result).toHaveLength(0);
     });
 
+    it('should erase when near a line segment between points', () => {
+      // Point (75, 75) is on the segment from (50,50) to (100,100), distance ~0
+      const result = filterStrokesAfterErase([pen], 75, 75, ERASE_RADIUS);
+      expect(result).toHaveLength(0);
+    });
+
+    it('should erase when close to segment but not to any point', () => {
+      // Pen with widely spaced points
+      const widePen: Stroke = {
+        tool: 'pen',
+        points: [{ x: 0, y: 0 }, { x: 200, y: 0 }],
+        color: '#fff',
+        brushSize: 2,
+      };
+      // Point (100, 5) is 5px from the segment, within ERASE_RADIUS=10
+      // but 100px from each endpoint
+      const result = filterStrokesAfterErase([widePen], 100, 5, ERASE_RADIUS);
+      expect(result).toHaveLength(0);
+    });
+
     it('should NOT erase when far from pen points', () => {
       const result = filterStrokesAfterErase([pen], 300, 300, ERASE_RADIUS);
       expect(result).toHaveLength(1);
+    });
+
+    it('should handle single-point pen stroke', () => {
+      const singlePoint: Stroke = {
+        tool: 'pen',
+        points: [{ x: 50, y: 50 }],
+        color: '#fff',
+        brushSize: 2,
+      };
+      const hit = filterStrokesAfterErase([singlePoint], 52, 52, ERASE_RADIUS);
+      expect(hit).toHaveLength(0);
+      const miss = filterStrokesAfterErase([singlePoint], 300, 300, ERASE_RADIUS);
+      expect(miss).toHaveLength(1);
     });
   });
 

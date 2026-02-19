@@ -161,10 +161,19 @@ export function filterStrokesAfterErase(
 ): Stroke[] {
   return strokes.filter(stroke => {
     if (stroke.tool === 'pen' && stroke.points) {
-      return !stroke.points.some(point => {
-        const dist = Math.sqrt((point.x - x) ** 2 + (point.y - y) ** 2);
-        return dist < eraseRadius;
-      });
+      const pts = stroke.points;
+      // Check each segment between consecutive points
+      for (let i = 0; i < pts.length - 1; i++) {
+        if (pointToSegmentDist(x, y, pts[i].x, pts[i].y, pts[i + 1].x, pts[i + 1].y) < eraseRadius) {
+          return false;
+        }
+      }
+      // Also check the first point (single-point strokes)
+      if (pts.length === 1) {
+        const dist = Math.sqrt((pts[0].x - x) ** 2 + (pts[0].y - y) ** 2);
+        return dist >= eraseRadius;
+      }
+      return true;
     }
 
     if (stroke.tool === 'text' && stroke.position) {

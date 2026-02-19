@@ -569,7 +569,8 @@ export default function DiagramCanvas() {
 
     if (tool === 'eraser') {
       isDrawingRef.current = false;
-      saveToBuffer();
+      // Redraw cleanly from remaining strokes so eraser trail disappears
+      redrawAll();
       return;
     }
 
@@ -584,7 +585,7 @@ export default function DiagramCanvas() {
 
     isDrawingRef.current = false;
     saveToBuffer();
-  }, [getState, saveToBuffer]);
+  }, [getState, saveToBuffer, redrawAll]);
 
   // ── Wheel zoom ─────────────────────────────────────────────────────
 
