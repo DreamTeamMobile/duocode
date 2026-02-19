@@ -120,6 +120,21 @@ export function dedentLines(
     };
 }
 
+/**
+ * Get the leading whitespace of the line containing the cursor.
+ * Used for auto-indent on Enter: new line starts at the same indentation.
+ */
+export function getLeadingWhitespace(text: string, cursorPos: number): string {
+    // Find the start of the current line
+    const lineStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+    // Extract leading whitespace
+    let i = lineStart;
+    while (i < text.length && (text[i] === ' ' || text[i] === '\t')) {
+        i++;
+    }
+    return text.substring(lineStart, i);
+}
+
 // Map language identifiers to Prism grammar names
 // Currently all supported languages use the same identifier,
 // but this provides an extension point for future mismatches
