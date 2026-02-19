@@ -56,13 +56,11 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
   }, [onCommit, onDismiss]);
 
   const handleInput = useCallback(() => {
-    // Auto-resize textarea height to fit content (only for non-shape editing)
-    if (shapeEditing) return;
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  }, [shapeEditing]);
+  }, []);
 
   const overlayStyle: React.CSSProperties = {
     left: `${position.left}px`,

@@ -1234,7 +1234,10 @@ button:disabled {
     text-align: center;
     width: 300%;
     min-width: 300%;
+    max-width: none;
     resize: none;
+    overflow: hidden;
+    padding: 0;
 }
 
 .text-input-overlay.shape-editing textarea:focus {
