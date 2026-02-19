@@ -17,7 +17,7 @@ import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-sql';
 import { useEditorStore } from '../../stores/editorStore';
-import { getPrismLanguage } from '../../services/code-editor-logic';
+import { getPrismLanguage, dedentLines } from '../../services/code-editor-logic';
 import { calculateTextOperation } from '../../services/ot-engine';
 import RemoteCursors from './RemoteCursors';
 
@@ -56,21 +56,40 @@ export default function CodeEditor() {
         const start = textarea.selectionStart;
         const end = textarea.selectionEnd;
         const oldCode = textarea.value;
-        const spaces = '    ';
-        const newCode = oldCode.substring(0, start) + spaces + oldCode.substring(end);
 
-        calculateTextOperation(oldCode, newCode);
-        applyLocalOperation();
-        setCode(newCode);
-        prevCodeRef.current = newCode;
+        if (e.shiftKey) {
+          // Shift+Tab: dedent selected lines
+          const { text: newCode, newStart, newEnd } = dedentLines(oldCode, start, end);
+          if (newCode !== oldCode) {
+            calculateTextOperation(oldCode, newCode);
+            applyLocalOperation();
+            setCode(newCode);
+            prevCodeRef.current = newCode;
 
-        // Restore cursor position after the inserted spaces
-        requestAnimationFrame(() => {
-          if (inputRef.current) {
-            inputRef.current.selectionStart = start + spaces.length;
-            inputRef.current.selectionEnd = start + spaces.length;
+            requestAnimationFrame(() => {
+              if (inputRef.current) {
+                inputRef.current.selectionStart = newStart;
+                inputRef.current.selectionEnd = newEnd;
+              }
+            });
           }
-        });
+        } else {
+          // Tab: insert 4 spaces
+          const spaces = '    ';
+          const newCode = oldCode.substring(0, start) + spaces + oldCode.substring(end);
+
+          calculateTextOperation(oldCode, newCode);
+          applyLocalOperation();
+          setCode(newCode);
+          prevCodeRef.current = newCode;
+
+          requestAnimationFrame(() => {
+            if (inputRef.current) {
+              inputRef.current.selectionStart = start + spaces.length;
+              inputRef.current.selectionEnd = start + spaces.length;
+            }
+          });
+        }
       }
     },
     [setCode, applyLocalOperation],
