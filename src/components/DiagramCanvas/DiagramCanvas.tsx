@@ -11,7 +11,6 @@ import {
   applyCanvasTransform,
   reconcileCoordinates,
   filterStrokesAfterErase,
-  getShapeCenter,
   findTextAtPosition,
   findStrokeAtPosition,
   getStrokeBounds,
@@ -31,6 +30,8 @@ interface TextOverlayState {
   shapeIndex: number | null;
   editIndex: number | null;
   initialText: string;
+  shapeWidth?: number;
+  shapeHeight?: number;
 }
 
 interface MouseLikeEvent {
@@ -582,6 +583,17 @@ export default function DiagramCanvas() {
     }
 
     if (currentStrokeRef.current) {
+      // Don't save degenerate shape strokes (click without drag / double-click artifacts)
+      const s = currentStrokeRef.current;
+      if (s.start && s.end) {
+        const dx = Math.abs(s.end.x - s.start.x);
+        const dy = Math.abs(s.end.y - s.start.y);
+        if (dx < 3 && dy < 3) {
+          currentStrokeRef.current = null;
+          isDrawingRef.current = false;
+          return;
+        }
+      }
       getState().addStroke(currentStrokeRef.current);
       currentStrokeRef.current = null;
     }
@@ -701,7 +713,7 @@ export default function DiagramCanvas() {
   const OVERLAY_OFFSET_LEFT = 10; // padding-left(8) + border(2)
   const OVERLAY_OFFSET_TOP = 6;   // padding-top(4) + border(2)
 
-  const getOverlayScreenPos = useCallback(() => {
+  const getOverlayScreenPos = useCallback((): { left: number; top: number; width?: number; height?: number } => {
     const canvas = canvasRef.current;
     if (!canvas) return { left: 0, top: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -712,6 +724,17 @@ export default function DiagramCanvas() {
 
     const cssScaleX = rect.width / canvas.width;
     const cssScaleY = rect.height / canvas.height;
+
+    const isShapeEditing = textOverlayRef.current.shapeIndex !== null;
+
+    if (isShapeEditing && textOverlayRef.current.shapeWidth != null && textOverlayRef.current.shapeHeight != null) {
+      return {
+        left: bufferX * cssScaleX,
+        top: bufferY * cssScaleY,
+        width: textOverlayRef.current.shapeWidth * z * cssScaleX,
+        height: textOverlayRef.current.shapeHeight * z * cssScaleY,
+      };
+    }
 
     return {
       left: bufferX * cssScaleX - OVERLAY_OFFSET_LEFT,
@@ -769,8 +792,17 @@ export default function DiagramCanvas() {
       }
       if (shapeIndex !== null) {
         const shape = strokes[shapeIndex];
-        const center = getShapeCenter(shape);
-        textOverlayRef.current = { visible: true, x: center.x, y: center.y, shapeIndex, editIndex: null, initialText: shape.text || '' };
+        const bounds = getStrokeBounds(shape);
+        textOverlayRef.current = {
+          visible: true,
+          x: bounds.minX,
+          y: bounds.minY,
+          shapeIndex,
+          editIndex: null,
+          initialText: shape.text || '',
+          shapeWidth: bounds.maxX - bounds.minX,
+          shapeHeight: bounds.maxY - bounds.minY,
+        };
         // Show selection highlight on the shape being edited
         selectedIndexRef.current = shapeIndex;
         redrawAll();

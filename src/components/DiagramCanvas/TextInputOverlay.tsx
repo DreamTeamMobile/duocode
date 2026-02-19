@@ -1,7 +1,7 @@
 import { useRef, useEffect, useCallback } from 'react';
 
 interface TextInputOverlayProps {
-  position: { left: number; top: number };
+  position: { left: number; top: number; width?: number; height?: number };
   onCommit: (text: string) => void;
   onDismiss: () => void;
   initialText?: string;
@@ -56,20 +56,27 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
   }, [onCommit, onDismiss]);
 
   const handleInput = useCallback(() => {
-    // Auto-resize textarea height to fit content
+    // Auto-resize textarea height to fit content (only for non-shape editing)
+    if (shapeEditing) return;
     const el = inputRef.current;
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = `${el.scrollHeight}px`;
-  }, []);
+  }, [shapeEditing]);
+
+  const overlayStyle: React.CSSProperties = {
+    left: `${position.left}px`,
+    top: `${position.top}px`,
+  };
+  if (shapeEditing && position.width != null && position.height != null) {
+    overlayStyle.width = `${position.width}px`;
+    overlayStyle.height = `${position.height}px`;
+  }
 
   return (
     <div
       className={`text-input-overlay${shapeEditing ? ' shape-editing' : ''}`}
-      style={{
-        left: `${position.left}px`,
-        top: `${position.top}px`,
-      }}
+      style={overlayStyle}
     >
       <textarea
         ref={inputRef}
