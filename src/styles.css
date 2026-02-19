@@ -1225,19 +1225,16 @@ button:disabled {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .text-input-overlay.shape-editing textarea {
     border: none;
     background: transparent;
     text-align: center;
-    width: 100%;
-    max-height: 100%;
+    width: 300%;
+    min-width: 300%;
     resize: none;
-    overflow: hidden;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
 }
 
 .text-input-overlay.shape-editing textarea:focus {
