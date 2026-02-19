@@ -5,9 +5,10 @@ interface TextInputOverlayProps {
   onCommit: (text: string) => void;
   onDismiss: () => void;
   initialText?: string;
+  shapeEditing?: boolean;
 }
 
-export default function TextInputOverlay({ position, onCommit, onDismiss, initialText }: TextInputOverlayProps) {
+export default function TextInputOverlay({ position, onCommit, onDismiss, initialText, shapeEditing }: TextInputOverlayProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const mountedAtRef = useRef(Date.now());
   const committedRef = useRef(false);
@@ -64,7 +65,7 @@ export default function TextInputOverlay({ position, onCommit, onDismiss, initia
 
   return (
     <div
-      className="text-input-overlay"
+      className={`text-input-overlay${shapeEditing ? ' shape-editing' : ''}`}
       style={{
         left: `${position.left}px`,
         top: `${position.top}px`,

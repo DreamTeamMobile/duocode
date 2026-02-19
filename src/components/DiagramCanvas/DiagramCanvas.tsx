@@ -302,6 +302,7 @@ export default function DiagramCanvas() {
     (text: string) => {
       if (!text.trim()) {
         textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+        selectedIndexRef.current = null;
         forceOverlayUpdate();
         return;
       }
@@ -326,6 +327,7 @@ export default function DiagramCanvas() {
         getState().addStroke(stroke);
       }
       textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+      selectedIndexRef.current = null;
       forceOverlayUpdate();
     },
     [getState, forceOverlayUpdate],
@@ -333,6 +335,7 @@ export default function DiagramCanvas() {
 
   const handleTextDismiss = useCallback(() => {
     textOverlayRef.current = { visible: false, x: 0, y: 0, shapeIndex: null, editIndex: null, initialText: '' };
+    selectedIndexRef.current = null;
     forceOverlayUpdate();
   }, [forceOverlayUpdate]);
 
@@ -768,12 +771,15 @@ export default function DiagramCanvas() {
         const shape = strokes[shapeIndex];
         const center = getShapeCenter(shape);
         textOverlayRef.current = { visible: true, x: center.x, y: center.y, shapeIndex, editIndex: null, initialText: shape.text || '' };
+        // Show selection highlight on the shape being edited
+        selectedIndexRef.current = shapeIndex;
+        redrawAll();
       } else {
         textOverlayRef.current = { visible: true, x: pos.x, y: pos.y, shapeIndex: null, editIndex: null, initialText: '' };
       }
       forceOverlayUpdate();
     },
-    [getMousePos, getState, forceOverlayUpdate],
+    [getMousePos, getState, forceOverlayUpdate, redrawAll],
   );
 
   return (
@@ -800,6 +806,7 @@ export default function DiagramCanvas() {
             onCommit={handleTextCommit}
             onDismiss={handleTextDismiss}
             initialText={textOverlayRef.current.initialText}
+            shapeEditing={textOverlayRef.current.shapeIndex !== null}
           />
         )}
         <DrawerLabels canvasRef={canvasRef} />
