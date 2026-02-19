@@ -23,8 +23,9 @@ describe('LanguageSelector', () => {
 
   it('displays human-readable labels', () => {
     const { getByText } = render(<LanguageSelector />);
-    expect(getByText('JavaScript')).toBeInTheDocument();
-    expect(getByText('TypeScript')).toBeInTheDocument();
+    // Executable languages get a ▶ prefix
+    expect(getByText(/JavaScript/)).toBeInTheDocument();
+    expect(getByText(/TypeScript/)).toBeInTheDocument();
     expect(getByText('Python')).toBeInTheDocument();
     expect(getByText('C++')).toBeInTheDocument();
     expect(getByText('C#')).toBeInTheDocument();

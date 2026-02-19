@@ -1,6 +1,6 @@
 {
   "name": "duocode",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "WebRTC-based collaboration tool with PDF export and syntax highlighting",
   "main": "index.html",
   "scripts": {

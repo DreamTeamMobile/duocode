@@ -17,7 +17,9 @@ import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-sql';
 import { useEditorStore } from '../../stores/editorStore';
+import { useExecutionStore } from '../../stores/executionStore';
 import { getPrismLanguage, dedentLines, getLeadingWhitespace } from '../../services/code-editor-logic';
+import { isExecutable } from '../../services/code-executor';
 import { calculateTextOperation } from '../../services/ot-engine';
 import RemoteCursors from './RemoteCursors';
 
@@ -69,6 +71,17 @@ export default function CodeEditor() {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Ctrl/Cmd + Enter: run code
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const lang = useEditorStore.getState().language;
+        if (isExecutable(lang)) {
+          const run = useExecutionStore.getState().runCode;
+          run?.();
+        }
+        return;
+      }
+
       const textarea = inputRef.current;
       if (!textarea) return;
 
