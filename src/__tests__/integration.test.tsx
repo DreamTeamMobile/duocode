@@ -48,21 +48,20 @@ describe('Integration: App loads and creates session', () => {
     });
   });
 
-  it('restores saved name and skips modal', async () => {
+  it('always shows name modal even with saved name (each tab is unique)', async () => {
     const sessionId = 'test123session';
-    // Only a session-specific key causes auto-restore (skips modal).
-    // The global key is used for pre-fill only.
     localStorage.setItem(`duocode_session_name_${sessionId}`, 'TestUser');
     window.location.search = `?session=${sessionId}`;
     window.location.href = `http://localhost:3000?session=${sessionId}`;
 
     const { container } = render(<App />);
 
+    // Modal should always show so each tab acts as a unique participant
     await waitFor(() => {
-      expect(useSessionStore.getState().peerName).toBe('TestUser');
+      expect(container.querySelector('[data-testid="name-entry-modal"]')).toBeInTheDocument();
     });
 
-    expect(container.querySelector('[data-testid="name-entry-modal"]')).not.toBeInTheDocument();
+    expect(useSessionStore.getState().peerName).toBeNull();
   });
 
   it('dismisses name modal on submit and stores the name', async () => {

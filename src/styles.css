@@ -1412,6 +1412,7 @@ button:disabled {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     margin-bottom: 6px;
     font-size: 12px;
 }
