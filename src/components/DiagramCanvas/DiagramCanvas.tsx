@@ -166,11 +166,19 @@ export default function DiagramCanvas() {
             const h = stroke.end.y - stroke.start.y;
             ctx.strokeRect(stroke.start.x, stroke.start.y, w, h);
             if (stroke.text && idx !== editingShapeIndex) {
-              ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
+              const fontSize = DEFAULT_FONT_SIZE;
+              ctx.font = `${fontSize}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(stroke.text, stroke.start.x + w / 2, stroke.start.y + h / 2);
+              const lines = stroke.text.split('\n');
+              const lineHeight = fontSize * 1.3;
+              const totalHeight = lines.length * lineHeight;
+              const centerX = stroke.start.x + w / 2;
+              const startY = stroke.start.y + h / 2 - totalHeight / 2 + lineHeight / 2;
+              lines.forEach((line, li) => {
+                ctx.fillText(line, centerX, startY + li * lineHeight);
+              });
               ctx.textAlign = 'left';
             }
           } else if (stroke.tool === 'circle' && stroke.start && stroke.end) {
@@ -180,11 +188,19 @@ export default function DiagramCanvas() {
             ctx.arc(stroke.start.x, stroke.start.y, radius, 0, 2 * Math.PI);
             ctx.stroke();
             if (stroke.text && idx !== editingShapeIndex) {
-              ctx.font = `${DEFAULT_FONT_SIZE}px sans-serif`;
+              const fontSize = DEFAULT_FONT_SIZE;
+              ctx.font = `${fontSize}px sans-serif`;
               ctx.fillStyle = stroke.textColor || stroke.color || '#000';
               ctx.textAlign = 'center';
               ctx.textBaseline = 'middle';
-              ctx.fillText(stroke.text, stroke.start.x, stroke.start.y);
+              const lines = stroke.text.split('\n');
+              const lineHeight = fontSize * 1.3;
+              const totalHeight = lines.length * lineHeight;
+              const cx = stroke.start.x;
+              const startY = stroke.start.y - totalHeight / 2 + lineHeight / 2;
+              lines.forEach((line, li) => {
+                ctx.fillText(line, cx, startY + li * lineHeight);
+              });
               ctx.textAlign = 'left';
             }
           }

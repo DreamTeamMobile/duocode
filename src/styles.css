@@ -1225,6 +1225,7 @@ button:disabled {
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .text-input-overlay.shape-editing textarea {
@@ -1232,8 +1233,11 @@ button:disabled {
     background: transparent;
     text-align: center;
     width: 100%;
-    height: auto;
+    max-height: 100%;
     resize: none;
+    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .text-input-overlay.shape-editing textarea:focus {
