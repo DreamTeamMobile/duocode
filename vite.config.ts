@@ -31,6 +31,9 @@ export default defineConfig({
       '@bjorn3/browser_wasi_shim',
     ],
   },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'dist',
   },
