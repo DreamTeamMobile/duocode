@@ -1,7 +1,17 @@
 import { useRef, useEffect } from 'react';
 import { useExecutionStore } from '../../stores/executionStore';
 import { useEditorStore } from '../../stores/editorStore';
-import { isExecutable } from '../../services/code-executor';
+import { useRuntimeStore } from '../../stores/runtimeStore';
+import { isExecutable, isWasmLanguage } from '../../services/code-executor';
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  python: 'Python',
+  c: 'C',
+  cpp: 'C++',
+  go: 'Go',
+  ruby: 'Ruby',
+  lua: 'Lua',
+};
 
 export default function OutputPanel() {
   const isRunning = useExecutionStore((s) => s.isRunning);
@@ -9,7 +19,11 @@ export default function OutputPanel() {
   const panelExpanded = useExecutionStore((s) => s.panelExpanded);
   const togglePanel = useExecutionStore((s) => s.togglePanel);
   const language = useEditorStore((s) => s.language);
+  const runtimeInfo = useRuntimeStore((s) => s.getRuntime(language === 'c' ? 'cpp' : language));
   const outputRef = useRef<HTMLPreElement>(null);
+
+  const isWasm = isWasmLanguage(language);
+  const isLoading = isWasm && runtimeInfo.status === 'loading';
 
   // Auto-scroll to bottom when output changes
   useEffect(() => {
@@ -18,17 +32,20 @@ export default function OutputPanel() {
     }
   }, [output, panelExpanded]);
 
-  // Hide when language doesn't support execution, or no output and not running
-  if (!isExecutable(language) || (!output && !isRunning)) return null;
+  // Hide when language doesn't support execution, or no output/loading/running
+  if (!isExecutable(language) || (!output && !isRunning && !isLoading)) return null;
 
   const hasError = output && output.exitCode !== 0;
   const hasOutput = output && (output.stdout || output.stderr);
+  const langName = LANGUAGE_NAMES[language] || language;
 
   return (
     <div className={`output-panel${panelExpanded ? ' expanded' : ' collapsed'}`}>
       <div className="output-header" onClick={togglePanel}>
         <div className="output-header-left">
-          {isRunning ? (
+          {isLoading ? (
+            <span className="output-spinner" />
+          ) : isRunning ? (
             <span className="output-spinner" />
           ) : output ? (
             <span className={`output-status-icon ${hasError ? 'error' : 'success'}`}>
@@ -39,7 +56,12 @@ export default function OutputPanel() {
           {output && (
             <span className="output-duration">{output.duration}ms</span>
           )}
-          {isRunning && (
+          {isLoading && (
+            <span className="output-running-label">
+              Downloading {langName} runtime... {runtimeInfo.progress > 0 ? `${runtimeInfo.progress}%` : ''}
+            </span>
+          )}
+          {isRunning && !isLoading && (
             <span className="output-running-label">Running...</span>
           )}
         </div>
@@ -60,7 +82,12 @@ export default function OutputPanel() {
       </div>
       {panelExpanded && (
         <pre className="output-body" ref={outputRef}>
-          {isRunning && !hasOutput && (
+          {isLoading && !hasOutput && (
+            <span className="output-placeholder">
+              Loading {langName} runtime... {runtimeInfo.progress > 0 ? `${runtimeInfo.progress}%` : 'please wait'}
+            </span>
+          )}
+          {isRunning && !hasOutput && !isLoading && (
             <span className="output-placeholder">Executing...</span>
           )}
           {output?.stdout && (

@@ -23,6 +23,17 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: [
+      'pyodide',
+      'wasmoon',
+      '@ruby/wasm-wasi',
+      '@bjorn3/browser_wasi_shim',
+    ],
+  },
+  worker: {
+    format: 'es',
+  },
   build: {
     outDir: 'dist',
   },

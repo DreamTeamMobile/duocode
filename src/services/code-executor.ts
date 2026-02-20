@@ -1,17 +1,21 @@
 /**
- * code-executor.ts — Framework-agnostic service for running JS/TS code
- * in a sandboxed Web Worker.
+ * code-executor.ts — Framework-agnostic service for running code.
+ *
+ * JS/TS: sandboxed Web Worker (fresh per execution).
+ * WASM languages (Python, C/C++, Go, Ruby, Lua): persistent workers via wasm-runtime-manager.
  */
 
 import type { ExecutionResult } from '../stores/executionStore';
+import { isWasmLanguage, executeWasm, stopWasmExecution, preloadRuntime } from './wasm-runtime-manager';
 
-const EXECUTABLE_LANGUAGES = new Set(['javascript', 'typescript']);
+const JS_LANGUAGES = new Set(['javascript', 'typescript']);
+const WASM_LANGUAGES = new Set(['python', 'c', 'cpp', 'go', 'ruby', 'lua']);
 
 let worker: Worker | null = null;
 let currentReject: ((reason: string) => void) | null = null;
 
 export function isExecutable(language: string): boolean {
-  return EXECUTABLE_LANGUAGES.has(language);
+  return JS_LANGUAGES.has(language) || WASM_LANGUAGES.has(language);
 }
 
 export function runCode(
@@ -19,7 +23,11 @@ export function runCode(
   language: string,
   timeout = 10_000,
 ): Promise<ExecutionResult> {
-  // Terminate any in-progress run
+  if (isWasmLanguage(language)) {
+    return executeWasm(language, code, timeout);
+  }
+
+  // JS/TS: fresh worker per execution
   terminateWorker();
 
   return new Promise<ExecutionResult>((resolve, reject) => {
@@ -52,6 +60,8 @@ export function stopExecution(): void {
   }
   terminateWorker();
 }
+
+export { preloadRuntime, isWasmLanguage } from './wasm-runtime-manager';
 
 function terminateWorker(): void {
   if (worker) {

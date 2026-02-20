@@ -10,6 +10,7 @@ import 'prismjs/components/prism-csharp';
 import 'prismjs/components/prism-go';
 import 'prismjs/components/prism-rust';
 import 'prismjs/components/prism-ruby';
+import 'prismjs/components/prism-lua';
 import 'prismjs/components/prism-swift';
 import 'prismjs/components/prism-scala';
 import 'prismjs/components/prism-markup';

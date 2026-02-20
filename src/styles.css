@@ -968,6 +968,40 @@ button:disabled {
     color: white !important;
 }
 
+/* Loading / Error state run button */
+.run-btn.loading {
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+    cursor: wait;
+    opacity: 0.7;
+    margin-left: 4px;
+    margin-bottom: 4px;
+}
+
+.run-btn.error {
+    color: #f59e0b !important;
+    border-color: #f59e0b !important;
+    margin-left: 4px;
+    margin-bottom: 4px;
+}
+
+.run-btn.error:hover {
+    background-color: #f59e0b !important;
+    color: white !important;
+}
+
+/* Indeterminate progress ring animation (when progress is 0%) */
+@keyframes progress-ring-spin {
+    0% { transform: rotate(-90deg); }
+    100% { transform: rotate(270deg); }
+}
+
+.progress-ring-indeterminate {
+    stroke-dasharray: 20 20;
+    animation: progress-ring-spin 1.2s linear infinite;
+    transform-origin: 8px 8px;
+}
+
 /* Output Panel */
 .output-panel {
     display: flex;

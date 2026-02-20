@@ -1,6 +1,6 @@
 import { useEditorStore } from '../../stores/editorStore';
 import { codeTemplates } from '../../services/code-editor-logic';
-import { isExecutable } from '../../services/code-executor';
+import { isExecutable, isWasmLanguage, preloadRuntime } from '../../services/code-executor';
 
 const LANGUAGES = Object.keys(codeTemplates);
 
@@ -16,6 +16,7 @@ const LANGUAGE_LABELS: Record<string, string> = {
   go: 'Go',
   rust: 'Rust',
   ruby: 'Ruby',
+  lua: 'Lua',
   swift: 'Swift',
   scala: 'Scala',
   php: 'PHP',
@@ -26,11 +27,19 @@ export default function LanguageSelector() {
   const language = useEditorStore((s) => s.language);
   const setLanguage = useEditorStore((s) => s.setLanguage);
 
+  const handleChange = (newLang: string) => {
+    setLanguage(newLang);
+    // Start preloading WASM runtime in background when user switches
+    if (isWasmLanguage(newLang)) {
+      preloadRuntime(newLang);
+    }
+  };
+
   return (
     <div id="languageSelector">
       <select
         value={language}
-        onChange={(e) => setLanguage(e.target.value)}
+        onChange={(e) => handleChange(e.target.value)}
         aria-label="Select language"
       >
         {LANGUAGES.map((lang) => (
