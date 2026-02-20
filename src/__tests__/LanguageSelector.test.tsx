@@ -15,19 +15,19 @@ describe('LanguageSelector', () => {
     expect(select.value).toBe('javascript');
   });
 
-  it('renders all 15 supported languages', () => {
+  it('renders all 16 supported languages', () => {
     const { container } = render(<LanguageSelector />);
     const options = container.querySelectorAll('option');
-    expect(options).toHaveLength(15);
+    expect(options).toHaveLength(16);
   });
 
   it('displays human-readable labels', () => {
     const { getByText } = render(<LanguageSelector />);
-    // Executable languages get a ▶ prefix
+    // Executable languages get a ▶ prefix (JS, TS, Python, C, C++, Go, Ruby, Lua)
     expect(getByText(/JavaScript/)).toBeInTheDocument();
     expect(getByText(/TypeScript/)).toBeInTheDocument();
-    expect(getByText('Python')).toBeInTheDocument();
-    expect(getByText('C++')).toBeInTheDocument();
+    expect(getByText(/Python/)).toBeInTheDocument();
+    expect(getByText(/C\+\+/)).toBeInTheDocument();
     expect(getByText('C#')).toBeInTheDocument();
   });
 

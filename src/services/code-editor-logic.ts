@@ -30,6 +30,7 @@ export const codeTemplates: Record<string, string> = {
     ruby: '# Write your code here\nputs "Hello, World!"',
     swift: '// Write your code here\nimport Foundation\n\nprint("Hello, World!")',
     scala: '// Write your code here\nobject Main extends App {\n    println("Hello, World!")\n}',
+    lua: '-- Write your code here\nprint("Hello, World!")',
     php: '<?php\n// Write your code here\necho "Hello, World!";',
     sql: '-- Write your SQL query here\nSELECT * FROM users WHERE id = 1;'
 };
