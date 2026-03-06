@@ -460,11 +460,21 @@ header h1 {
     flex-shrink: 0;
 }
 
+/* Header logo */
+.header-logo {
+    height: 28px;
+    width: auto;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
 /* Clickable title for debug info */
 .clickable-title {
     cursor: pointer;
     user-select: none;
     transition: color 0.2s;
+    display: flex;
+    align-items: center;
 }
 
 .clickable-title:hover {

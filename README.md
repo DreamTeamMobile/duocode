@@ -1,7 +1,13 @@
-# DuoCode - Real-Time Collaborative Interview Platform
+<p align="center">
+  <img src="public/duocode-logo.png" alt="DuoCode" width="200">
+</p>
 
-[![CI](https://github.com/DreamTeamMobile/duocode/actions/workflows/ci.yml/badge.svg)](https://github.com/DreamTeamMobile/duocode/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/License-Proprietary-blue.svg)](LICENSE)
+<h1 align="center">DuoCode - Real-Time Collaborative Interview Platform</h1>
+
+<p align="center">
+  <a href="https://github.com/DreamTeamMobile/duocode/actions/workflows/ci.yml"><img src="https://github.com/DreamTeamMobile/duocode/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Proprietary-blue.svg" alt="License"></a>
+</p>
 
 A lightweight, serverless-first web application for conducting technical interviews with real-time code collaboration, drawing canvas, and messaging.
 
