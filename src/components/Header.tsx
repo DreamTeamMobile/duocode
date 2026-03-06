@@ -166,7 +166,7 @@ export default function Header() {
   return (
     <header>
       <div className="header-left">
-        <h1 className="clickable-title" title="Click for debug info">DuoCode</h1>
+        <h1 className="clickable-title" title="Click for debug info"><img src="/logo.png" alt="DuoCode" className="header-logo" />DuoCode</h1>
         <span className="app-version">v{APP_VERSION}</span>
         <SyncIndicator />
         <SessionTimer />
