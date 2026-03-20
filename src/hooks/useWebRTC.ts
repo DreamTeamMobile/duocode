@@ -91,6 +91,11 @@ export function useWebRTC({ onMessage }: UseWebRTCOptions = {}): UseWebRTCReturn
     channel.onopen = () => {
       updateDataChannelRef();
       updateConnectionState('connected');
+
+      // Joining peer requests full state from existing peers
+      if (!useSessionStore.getState().isHost) {
+        channel.send(JSON.stringify({ type: 'state-request' }));
+      }
     };
 
     channel.onclose = () => {
@@ -105,12 +110,17 @@ export function useWebRTC({ onMessage }: UseWebRTCOptions = {}): UseWebRTCReturn
         if (onMessageRef.current) {
           onMessageRef.current(message);
         }
-        // Relay the message to all other connected peers
-        peersRef.current.forEach(({ channel: ch }, pid) => {
-          if (pid !== peerId && ch && ch.readyState === 'open') {
-            ch.send(event.data);
-          }
-        });
+        // Relay the message to all other connected peers.
+        // Don't relay state-request/state-sync — these are point-to-point
+        // between the joining peer and the host. Relaying them causes
+        // late state-sync messages that overwrite in-progress OT operations.
+        if (message.type !== 'state-request' && message.type !== 'state-sync') {
+          peersRef.current.forEach(({ channel: ch }, pid) => {
+            if (pid !== peerId && ch && ch.readyState === 'open') {
+              ch.send(event.data);
+            }
+          });
+        }
       } catch {
         // Non-JSON message — ignore
       }
